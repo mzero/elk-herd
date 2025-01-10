@@ -1,0 +1,19 @@
+{
+    "checks" : {
+        "DebugLog" : false,
+        "DebugTodo" : false,
+        "DropConsOfItemAndList" : false,
+
+        "ExposeAll" : false,
+        "MapNothingToNothing" : false,
+        "MultiLineRecordFormatting" : true,
+        "SingleFieldRecord" : false,
+
+        "UnusedPatternVariable" : false,
+        "UnnecessaryParens" : true,
+        "UseConsOverConcat" : false
+    },
+    "TriggerWords" : {
+        "words" : [ "TODO", "ToDo", "todo", "FIXME", "FixMe", "fixme" ]
+    }
+}

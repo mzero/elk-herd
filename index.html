@@ -1,0 +1,27 @@
+<!DOCTYPE HTML>
+<html>
+
+<head>
+  <meta charset="UTF-8">
+  <title>crunch/elk-herd</title>
+
+  <link rel="stylesheet" href="assets/ext/bootstrap-4.3.1.min.css">
+  <link rel="stylesheet" href="assets/style.css">
+</head>
+
+<body>
+  <div id="elm-root">
+  </div>
+</body>
+
+<script src="assets/ext/jquery-3.4.1.min.js"></script>
+<script src="assets/ext/bootstrap-4.3.1.bundle.min.js"></script>
+<script src="build/main.js"></script>
+<script>
+    app = Elm.Main.init({
+      node: document.getElementById('elm-root'),
+      flags: location.search.slice(1)
+    });
+    hookup_ports(app);
+</script>
+</html>
