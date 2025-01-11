@@ -1,20 +1,5 @@
 module Elektron.Struct exposing
-  ( Part
-
-  , uint8
-  , uint16be
-  , uint32be
-  , bytes
-  , chars
-
-  , list
-  , array
-
-  , map
-
-  , const
-
-  , VersionedPart
+  ( VersionedPart
   , fixedVersion
 
   , object
@@ -29,8 +14,13 @@ module Elektron.Struct exposing
   , buildVersioned
   )
 
-{-
-    This is somewhat like Codec, but a bit more.
+{-| Structure descriptors for decoding and encoding the Elekctron storage
+data structures. Descriptors encapsulate how to convert between bytes in the
+struct, and Elm objects.
+
+This code contains some rather specialized support for the issues surrounding
+Elektron storage formats. In particular the versioning system requires non-
+trivial amounts of code.
 -}
 
 import Array exposing (Array)
@@ -40,154 +30,11 @@ import Html.Attributes as Attr
 import ByteArray exposing (ByteArray)
 import ByteArray.Builder as Builder
 import ByteArray.Parser as Parser
+import Elektron.Struct.Part as Part exposing (Part)
 import Missing.List as List
 import Missing.Maybe as Maybe
 import SysEx.Internal exposing (..)
-import Windows1252
 
-{-| Structure descriptors for decoding and encoding the Elekctron storage
-data structures. Descriptors encapsulate how to convert between bytes in the
-struct, and Elm objects.
-
-This code is very similar to the code in `SysEx.ApiUtil`. In fact, this code's
-`Part` and that code's `Arg` are almost identical. It could probably all be
-unified and put under `ByteArray`... but not now.
-
-This code contains some rather specialized support for the issues surrounding
-Elektron storage formats. In particular the versioning system requires non-
-trivial amounts of code.
--}
-
-type alias Decoder a = Parser.Parser a
-type alias Encoder = Builder.Builder
-
-{-| An object that encapsulates how to encode, decode, and view a particular
-data type. All three fields are functions.
-
-The `view` function here takes a string which is the name of the field that
-this datum is for.
-
-TODO: `Arg.view` doesn't have this extra string label. `Part` probably shouldn't
-either, and the "fieldness" of a value should handled over in `field`. Or at
-least in a transformer of `Part -> LabeledPart`?
--}
-type alias Part a =
-  { encoder : a -> Encoder
-  , decoder : Decoder a
-  , view : String -> a -> List (Html.Html Never)
-  }
-
-uint8 : Part Int
-uint8 =
-  { encoder = Builder.uint8
-  , decoder = Parser.uint8
-  , view = \label v -> [ fieldView label <| String.fromInt v ]
-  }
-
-
-uint16be : Part Int
-uint16be =
-  { encoder = Builder.uint16be
-  , decoder = Parser.uint16be
-  , view = \label v -> [ fieldView label <| String.fromInt v ]
-  }
-
-uint32be : Part Int
-uint32be =
-  { encoder = Builder.uint32be
-  , decoder = Parser.uint32be
-  , view = \label v -> [ fieldView label <| String.fromInt v ]
-  }
-
-bytes : Int -> Part ByteArray
-bytes n =
-  { encoder = Builder.bytes
-  , decoder = Parser.bytes n
-  , view = \label v ->
-    [ Html.div [ Attr.class "field field-fullwidth" ]
-      [ Html.span [ Attr.class "label" ] [ Html.text label ]
-      , Html.span [ Attr.class "value hexdump" ]
-        [ Html.text <| ByteArray.hexDump v ]
-      ]
-    ]
-  }
-
-chars : Int -> Part String
-chars length =
-  let
-    extractString :  ByteArray -> String
-    extractString =
-      ByteArray.toList
-      >> List.filter ((/=) 0)
-      >> List.map Windows1252.toUnicodeChar
-      >> String.fromList
-    setString : String -> ByteArray
-    setString =
-      Windows1252.digitaktClean
-      >> String.padRight length '\u{0000}'
-      >> String.left length
-      >> String.toList
-      >> List.map Windows1252.fromUnicodeChar
-      >> ByteArray.fromList
-  in
-    { encoder = setString >> Builder.bytes
-    , decoder = Parser.bytes length |> Parser.map (extractString)
-    , view = \label v -> [ fieldView label <| "\"" ++ v ++ "\"" ]
-    }
-
-
-
-map : (a -> b) -> (b -> a) -> Part a -> Part b
-map fab fba pa =
-  { encoder = pa.encoder << fba
-  , decoder = Parser.map fab pa.decoder
-  , view = \label v -> pa.view label <| fba v
-  }
-
-{-| A part that is expecting to always be the same value. Believe it or not,
-there are a few of these in the Instrument structures!
--}
-const : a -> String -> Part a -> Part a
-const c desc pa =
-  { encoder = always (pa.encoder c)
-  , decoder =
-      pa.decoder |> Parser.andThen (\v ->
-        if v == c
-          then Parser.succeed v
-          else Parser.fail <| "expecting " ++ desc
-      )
-  , view = pa.view
-  }
-
-list : Int -> Part a -> Part (List a)
-list n pa =
-  { encoder = Builder.list pa.encoder
-  , decoder =
-    let
-      step (i, r) =
-        if i <= 0
-          then Parser.succeed <| List.reverse r
-          else pa.decoder |> Parser.andThen (\e -> step (i - 1, e::r))
-    in
-      step (n, [])
-  , view = \label v ->
-    [ Html.div [ Attr.class "field field-fullwidth" ]
-      [ Html.span [ Attr.class "label" ] [ Html.text label ]
-      , Html.ol [ Attr.class "field field-fullwidth" ]
-        <| List.map (Html.li [] << pa.view "") v
-      ]
-    ]
-  }
-
-array : Int -> Part a -> Part (Array a)
-array n pa =
-  let
-    pl = list n pa
-  in
-    { encoder = Builder.array pa.encoder
-    , decoder = Parser.map Array.fromList pl.decoder
-    , view = \label v -> pl.view label <| Array.toList v
-   }
 
 {- About versions
 
@@ -217,6 +64,9 @@ patternStorage and a kitStorage, each with their own version fields. Only the
 two versions must match. So we parse the first letting it tell us what version,
 and then parse the second insisting on it being the same.
 -}
+
+type alias Encoder = Part.Encoder
+type alias Decoder a = Part.Decoder a
 
 
 {-| Pretty much like a `Part`, but for structures that contain a version.

@@ -66,15 +66,16 @@ import ByteArray exposing (ByteArray)
 import ByteArray.Parser as Parser
 import Elektron.Digitakt.CppStructs as CppStructs
 import Elektron.Struct as ST
+import Elektron.Struct.Part as Part exposing (Part)
 import Missing.Maybe as Maybe
 import Util
 
 {-| Just like uint32be, but it checks that it is in the supported range.
 -}
-version : String -> Int -> Int -> ST.Part Int
+version : String -> Int -> Int -> Part Int
 version t lo hi =
   let
-    pbase = ST.uint32be
+    pbase = Part.uint32be
     errorMsg v =
       t ++ " version " ++ String.fromInt v
       ++ " out of supported range "
@@ -97,8 +98,8 @@ magicTail = 0xbacef00c
 
 {-| A field that always has a constant, magic value.
 -}
-magic : Int -> ST.Part Int
-magic x = ST.const x ("magic " ++ Util.hexBytesString x) ST.uint32be
+magic : Int -> Part Int
+magic x = Part.const x ("magic " ++ Util.hexBytesString x) Part.uint32be
 
 
 {- Structure names follow Elektron's header files names for these structures.
@@ -187,21 +188,21 @@ structPattern =
   ST.object Pattern
     |> ST.version .version      "version"     (version "pattern" 0 9)
     |> ST.variant .tracks       "tracks"
-        [ (0, ST.array 16 (structTrack 0))
-        , (1, ST.array 16 (structTrack 1))
-        , (2, ST.array 16 (structTrack 1))
-        , (3, ST.array 16 (structTrack 2))
-        , (4, ST.array 16 (structTrack 2))
-        , (5, ST.array 16 (structTrack 3))
-        , (6, ST.array 16 (structTrack 3))
-        , (7, ST.array 16 (structTrack 4))
-        , (8, ST.array 16 (structTrack 4))
-        , (9, ST.array 16 (structTrack 5))
+        [ (0, Part.array 16 (structTrack 0))
+        , (1, Part.array 16 (structTrack 1))
+        , (2, Part.array 16 (structTrack 1))
+        , (3, Part.array 16 (structTrack 2))
+        , (4, Part.array 16 (structTrack 2))
+        , (5, Part.array 16 (structTrack 3))
+        , (6, Part.array 16 (structTrack 3))
+        , (7, Part.array 16 (structTrack 4))
+        , (8, Part.array 16 (structTrack 4))
+        , (9, Part.array 16 (structTrack 5))
         ]
-    |> ST.field   .pLocks       "pLocks"      (ST.array 80 structPLock)
-    |> ST.field   .name         "name"        (ST.chars 16)
+    |> ST.field   .pLocks       "pLocks"      (Part.array 80 structPLock)
+    |> ST.field   .name         "name"        (Part.chars 16)
     |> ST.skipTo  .skip1                      CppStructs.patternStorage_kitIndex
-    |> ST.field   .kitIndex     "kitIndex"    ST.uint8
+    |> ST.field   .kitIndex     "kitIndex"    Part.uint8
     |> ST.skipTo  .skip2                      CppStructs.patternStorage_sizeof
     |> ST.buildVersioned
 
@@ -228,10 +229,10 @@ type alias Track =
   ,   skip2:        ByteArray
   }
 
-structTrack : Int -> ST.Part Track
+structTrack : Int -> Part Track
 structTrack v =
   ST.object Track
-    |> ST.field   .steps        "steps"       (ST.bytes 128)
+    |> ST.field   .steps        "steps"       (Part.bytes 128)
     |> (case CppStructs.trackStorage_soundSlotLocks v of
           Nothing ->
                ST.omitField .skip1 ByteArray.empty
@@ -239,7 +240,7 @@ structTrack v =
 
           Just offset ->
                ST.skipTo .skip1 (\_ -> Just offset)
-            >> ST.field .soundPLocks "soundPLocks" (ST.bytes 64)
+            >> ST.field .soundPLocks "soundPLocks" (Part.bytes 64)
     )
     |> ST.skipTo .skip2 (\_ -> CppStructs.trackStorage_sizeof v)
     |> ST.build
@@ -294,12 +295,12 @@ type alias PLock =
     -- easier to keep this as a ByteArray.
   }
 
-structPLock : ST.Part PLock
+structPLock : Part PLock
 structPLock =
   ST.object PLock
-    |> ST.field   .paramId    "paramId"   ST.uint8
-    |> ST.field   .track      "track"     ST.uint8
-    |> ST.field   .steps      "steps"     (ST.bytes 128)
+    |> ST.field   .paramId    "paramId"   Part.uint8
+    |> ST.field   .track      "track"     Part.uint8
+    |> ST.field   .steps      "steps"     (Part.bytes 128)
     |> ST.build
 
 plockSamplePLocks : Maybe Sound -> PLock -> Maybe (Array (Maybe Int))
@@ -350,32 +351,32 @@ structKit : ST.VersionedPart Int Kit
 structKit =
   ST.object Kit
     |> ST.version .version      "version"     (version "kit" 0 9)
-    |> ST.field   .name         "name"        (ST.chars 16)
+    |> ST.field   .name         "name"        (Part.chars 16)
     |> ST.skipTo  .skip1                      CppStructs.kitStorage_trackSounds
     |> ST.variant .sounds       "sounds"
-        [ (0, ST.array 8 <| ST.fixedVersion structSound 0)
-        , (1, ST.array 8 <| ST.fixedVersion structSound 0)
-        , (2, ST.array 8 <| ST.fixedVersion structSound 0)
-        , (3, ST.array 8 <| ST.fixedVersion structSound 0)
-        , (4, ST.array 8 <| ST.fixedVersion structSound 0)
-        , (5, ST.array 8 <| ST.fixedVersion structSound 0)
-        , (6, ST.array 8 <| ST.fixedVersion structSound 1)
-        , (7, ST.array 8 <| ST.fixedVersion structSound 1)
-        , (8, ST.array 8 <| ST.fixedVersion structSound 2)
-        , (9, ST.array 8 <| ST.fixedVersion structSound 2)
+        [ (0, Part.array 8 <| ST.fixedVersion structSound 0)
+        , (1, Part.array 8 <| ST.fixedVersion structSound 0)
+        , (2, Part.array 8 <| ST.fixedVersion structSound 0)
+        , (3, Part.array 8 <| ST.fixedVersion structSound 0)
+        , (4, Part.array 8 <| ST.fixedVersion structSound 0)
+        , (5, Part.array 8 <| ST.fixedVersion structSound 0)
+        , (6, Part.array 8 <| ST.fixedVersion structSound 1)
+        , (7, Part.array 8 <| ST.fixedVersion structSound 1)
+        , (8, Part.array 8 <| ST.fixedVersion structSound 2)
+        , (9, Part.array 8 <| ST.fixedVersion structSound 2)
         ]
     |> ST.skipTo  .skip2                    CppStructs.kitStorage_midiParams
     |> ST.variant .midiSetup    "midiSetup"
-        [ (0, ST.array 8 <| ST.fixedVersion structMidiSetup 0)
-        , (1, ST.array 8 <| ST.fixedVersion structMidiSetup 0)
-        , (2, ST.array 8 <| ST.fixedVersion structMidiSetup 0)
-        , (3, ST.array 8 <| ST.fixedVersion structMidiSetup 0)
-        , (4, ST.array 8 <| ST.fixedVersion structMidiSetup 0)
-        , (5, ST.array 8 <| ST.fixedVersion structMidiSetup 0)
-        , (6, ST.array 8 <| ST.fixedVersion structMidiSetup 1)
-        , (7, ST.array 8 <| ST.fixedVersion structMidiSetup 1)
-        , (8, ST.array 8 <| ST.fixedVersion structMidiSetup 1)
-        , (9, ST.array 8 <| ST.fixedVersion structMidiSetup 1)
+        [ (0, Part.array 8 <| ST.fixedVersion structMidiSetup 0)
+        , (1, Part.array 8 <| ST.fixedVersion structMidiSetup 0)
+        , (2, Part.array 8 <| ST.fixedVersion structMidiSetup 0)
+        , (3, Part.array 8 <| ST.fixedVersion structMidiSetup 0)
+        , (4, Part.array 8 <| ST.fixedVersion structMidiSetup 0)
+        , (5, Part.array 8 <| ST.fixedVersion structMidiSetup 0)
+        , (6, Part.array 8 <| ST.fixedVersion structMidiSetup 1)
+        , (7, Part.array 8 <| ST.fixedVersion structMidiSetup 1)
+        , (8, Part.array 8 <| ST.fixedVersion structMidiSetup 1)
+        , (9, Part.array 8 <| ST.fixedVersion structMidiSetup 1)
         ]
     |> ST.skipTo  .skip3                    CppStructs.kitStorage_sizeof
     |> ST.buildVersioned
@@ -437,10 +438,10 @@ structSound =
   ST.object Sound
     |> ST.field   .magicHead    "magicHead"   (magic magicHead)
     |> ST.version .version      "version"     (version "sound" 0 2)
-    |> ST.field   .tagMask      "tagMask"     ST.uint32be
-    |> ST.field   .name         "name"        (ST.chars 16)
+    |> ST.field   .tagMask      "tagMask"     Part.uint32be
+    |> ST.field   .name         "name"        (Part.chars 16)
     |> ST.skipTo  .skip1                      CppStructs.soundStorage_sampleSlot
-    |> ST.field   .sampleSlot   "sampleSlot"  ST.uint8
+    |> ST.field   .sampleSlot   "sampleSlot"  Part.uint8
     |> ST.skipTo  .skip2                      CppStructs.soundStorage_sampleFile
     |> ST.field   .sample       "sample"      structSample
     |> ST.skipTo  .skip3                      CppStructs.soundStorage_sizeof
@@ -495,7 +496,7 @@ structMidiSetup =
   ST.object MidiSetup
     |> ST.version .version      "version"     (version "midi setup" 0 1)
     |> ST.skipTo  .skip1                      CppStructs.midiSetupStorage_enableMask
-    |> ST.field   .enableMask   "enableMask"  ST.uint16be
+    |> ST.field   .enableMask   "enableMask"  Part.uint16be
     |> ST.skipTo  .skip2                      CppStructs.midiSetupStorage_sizeof
     |> ST.buildVersioned
 
@@ -522,7 +523,7 @@ structProjectSettings =
   ST.object ProjectSettings
     |> ST.version .version      "version"     (version "settings" 0 7)
     |> ST.skipTo  .skip1                      CppStructs.projectSettingsStorage_sampleList
-    |> ST.field   .samples      "samples"     (ST.array 128 structSample)
+    |> ST.field   .samples      "samples"     (Part.array 128 structSample)
     |> ST.skipTo  .skip2                      CppStructs.projectSettingsStorage_sizeof
     |> ST.buildVersioned
 
@@ -542,13 +543,13 @@ type alias Sample =
   , seqnr : Int
   }
 
-structSample : ST.Part Sample
+structSample : Part Sample
 structSample =
   ST.object Sample
-    |> ST.field     .inode    "inode"     ST.uint32be
-    |> ST.field     .hash     "hash"      ST.uint32be
-    |> ST.field     .filesize "filesize"  ST.uint32be
-    |> ST.field     .seqnr    "seqnr"     ST.uint32be
+    |> ST.field     .inode    "inode"     Part.uint32be
+    |> ST.field     .hash     "hash"      Part.uint32be
+    |> ST.field     .filesize "filesize"  Part.uint32be
+    |> ST.field     .seqnr    "seqnr"     Part.uint32be
     |> ST.build
 
 inodeInvalid : Int
