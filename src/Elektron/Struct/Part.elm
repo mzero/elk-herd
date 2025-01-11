@@ -11,6 +11,9 @@ module Elektron.Struct.Part exposing
   , map
 
   , const
+  
+  , version
+  , magicHead, magicTail
   )
 
 {-| This is somewhat like Codec, but a bit more.
@@ -29,6 +32,7 @@ import ByteArray.Builder as Builder
 import ByteArray.Parser as Parser
 import Missing.List as List
 import SysEx.Internal exposing (..)
+import Util
 import Windows1252
 
 type alias Decoder a = Parser.Parser a
@@ -162,3 +166,36 @@ array n pa =
     , decoder = Parser.map Array.fromList pl.decoder
     , view = \label v -> pl.view label <| Array.toList v
    }
+
+
+{-| Just like uint32be, but it checks that it is in the supported range.
+-}
+version : String -> Int -> Int -> Part Int
+version t lo hi =
+  let
+    pbase = uint32be
+    errorMsg v =
+      t ++ " version " ++ String.fromInt v
+      ++ " out of supported range "
+      ++ String.fromInt lo ++ " ~ " ++ String.fromInt hi
+  in
+    { pbase
+    | decoder =
+        pbase.decoder |> Parser.andThen (\v ->
+          if lo <= v && v <= hi
+            then Parser.succeed v
+            else Parser.fail (errorMsg v)
+          )
+    }
+
+
+{-| A field that always has a constant, magic value.
+-}
+magic : Int -> Part Int
+magic x = const x ("magic " ++ Util.hexBytesString x) uint32be
+
+magicHead : Part Int
+magicHead = magic 0xbeefbace
+
+magicTail : Part Int
+magicTail = magic 0xbacef00c

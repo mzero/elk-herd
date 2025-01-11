@@ -63,43 +63,10 @@ import Array exposing (Array)
 import Bitwise
 
 import ByteArray exposing (ByteArray)
-import ByteArray.Parser as Parser
 import Elektron.Digitakt.CppStructs as CppStructs
 import Elektron.Struct as ST
 import Elektron.Struct.Part as Part exposing (Part)
 import Missing.Maybe as Maybe
-import Util
-
-{-| Just like uint32be, but it checks that it is in the supported range.
--}
-version : String -> Int -> Int -> Part Int
-version t lo hi =
-  let
-    pbase = Part.uint32be
-    errorMsg v =
-      t ++ " version " ++ String.fromInt v
-      ++ " out of supported range "
-      ++ String.fromInt lo ++ " ~ " ++ String.fromInt hi
-  in
-    { pbase
-    | decoder =
-        pbase.decoder |> Parser.andThen (\v ->
-          if lo <= v && v <= hi
-            then Parser.succeed v
-            else Parser.fail (errorMsg v)
-          )
-    }
-
-magicHead : Int
-magicHead = 0xbeefbace
-
-magicTail : Int
-magicTail = 0xbacef00c
-
-{-| A field that always has a constant, magic value.
--}
-magic : Int -> Part Int
-magic x = Part.const x ("magic " ++ Util.hexBytesString x) Part.uint32be
 
 
 {- Structure names follow Elektron's header files names for these structures.
@@ -186,7 +153,7 @@ type alias Pattern =
 structPattern : ST.VersionedPart Int Pattern
 structPattern =
   ST.object Pattern
-    |> ST.version .version      "version"     (version "pattern" 0 9)
+    |> ST.version .version      "version"     (Part.version "pattern" 0 9)
     |> ST.variant .tracks       "tracks"
         [ (0, Part.array 16 (structTrack 0))
         , (1, Part.array 16 (structTrack 1))
@@ -350,7 +317,7 @@ type alias Kit =
 structKit : ST.VersionedPart Int Kit
 structKit =
   ST.object Kit
-    |> ST.version .version      "version"     (version "kit" 0 9)
+    |> ST.version .version      "version"     (Part.version "kit" 0 9)
     |> ST.field   .name         "name"        (Part.chars 16)
     |> ST.skipTo  .skip1                      CppStructs.kitStorage_trackSounds
     |> ST.variant .sounds       "sounds"
@@ -436,8 +403,8 @@ type alias Sound =
 structSound : ST.VersionedPart Int Sound
 structSound =
   ST.object Sound
-    |> ST.field   .magicHead    "magicHead"   (magic magicHead)
-    |> ST.version .version      "version"     (version "sound" 0 2)
+    |> ST.field   .magicHead    "magicHead"   (Part.magicHead)
+    |> ST.version .version      "version"     (Part.version "sound" 0 2)
     |> ST.field   .tagMask      "tagMask"     Part.uint32be
     |> ST.field   .name         "name"        (Part.chars 16)
     |> ST.skipTo  .skip1                      CppStructs.soundStorage_sampleSlot
@@ -494,7 +461,7 @@ type alias MidiSetup =
 structMidiSetup : ST.VersionedPart Int MidiSetup
 structMidiSetup =
   ST.object MidiSetup
-    |> ST.version .version      "version"     (version "midi setup" 0 1)
+    |> ST.version .version      "version"     (Part.version "midi setup" 0 1)
     |> ST.skipTo  .skip1                      CppStructs.midiSetupStorage_enableMask
     |> ST.field   .enableMask   "enableMask"  Part.uint16be
     |> ST.skipTo  .skip2                      CppStructs.midiSetupStorage_sizeof
@@ -521,7 +488,7 @@ type alias ProjectSettings =
 structProjectSettings : ST.VersionedPart Int ProjectSettings
 structProjectSettings =
   ST.object ProjectSettings
-    |> ST.version .version      "version"     (version "settings" 0 7)
+    |> ST.version .version      "version"     (Part.version "settings" 0 7)
     |> ST.skipTo  .skip1                      CppStructs.projectSettingsStorage_sampleList
     |> ST.field   .samples      "samples"     (Part.array 128 structSample)
     |> ST.skipTo  .skip2                      CppStructs.projectSettingsStorage_sizeof
