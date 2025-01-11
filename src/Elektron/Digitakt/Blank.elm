@@ -34,7 +34,7 @@ of the empty patternKit.
 import ByteArray exposing (ByteArray)
 import Elektron.Digitakt.BlankData as BlankData
 import Elektron.Digitakt.Dump as Dump
-import Elektron.StructUtil as SU
+import Elektron.Struct as ST
 import ByteArray.Compression
 import ByteArray.Parser as Parser
 
@@ -45,7 +45,7 @@ prepDataCompressed =
     (ByteArray.fromList >> ByteArray.Compression.decompress)
 
 
-buildBlank : SU.VersionedPart v a -> v -> Maybe ByteArray -> Maybe a
+buildBlank : ST.VersionedPart v a -> v -> Maybe ByteArray -> Maybe a
 buildBlank struct v =
   Maybe.andThen (Parser.parse (struct.decoderVersion v) >> Result.toMaybe)
 

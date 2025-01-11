@@ -1,4 +1,4 @@
-module Elektron.StructUtil exposing
+module Elektron.Struct exposing
   ( Part
 
   , uint8
