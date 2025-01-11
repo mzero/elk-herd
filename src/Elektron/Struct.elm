@@ -1,8 +1,8 @@
 module Elektron.Struct exposing
-  ( VersionedPart
+  ( Struct
   , fixedVersion
 
-  , object
+  , struct
   , field
   , omitField
   , skipTo
@@ -11,7 +11,7 @@ module Elektron.Struct exposing
   , fieldWithVersion
   , variant
   , build
-  , buildVersioned
+  , buildAsPart
   )
 
 {-| Structure descriptors for decoding and encoding the Elekctron storage
@@ -75,7 +75,7 @@ The `decoderVersion` function will parse, expecting a particular version of
 the structure, and if the version field doesn't match, fail to parse.
 The `version` function extracts the version from the structure.
 -}
-type alias VersionedPart v a =
+type alias Struct v a =
   { encoder : a -> Encoder
   , decoder : Decoder a
   , decoderVersion : v -> Decoder a
@@ -83,9 +83,9 @@ type alias VersionedPart v a =
   , version : a -> v
   }
 
-{-| Return a `Part` for a particular version of a `VersionedPart`.
+{-| Return a `Part` for a particular version of a `Struct`.
 -}
-fixedVersion : VersionedPart v a -> v -> Part a
+fixedVersion : Struct v a -> v -> Part a
 fixedVersion pa v =
   { encoder = pa.encoder
   , decoder = pa.decoderVersion v
@@ -144,7 +144,7 @@ This works because the name of the type acts as a constrcutor:
 
     PLock : Int -> Int -> Array Int -> PLock
 
-`ObjectBuilder` builds up the parser, adding one more field for each `field`
+`StructBuilder` builds up the parser, adding one more field for each `field`
 call, so the parse looks like
 
     Parser.succeed PLock
@@ -161,7 +161,7 @@ ensures that we don't try to do anything with the version. Once the version
 field is parsed, `x` will be the same as `v` (generally `Int`). Note that the
 type of the `version` field reflects this, and changes as the fields are parsed.
 -}
-type ObjectBuilder a b v x = OB
+type StructBuilder a b v x = SB
   { encoders : List (a -> Encoder)
   , decoder : Maybe v -> Decoder (b, x, Parser.Mark)
   , views : List (a -> List (Html.Html Never))
@@ -176,8 +176,8 @@ For the astute: The decoder return type is `(b, v, Parser.Mark)`
   * `v` is the version we know, which at the start is `()`
   * `Paser.Mark` is the point in the byte stream where we start parsing
 -}
-object : b -> ObjectBuilder a b v ()
-object b = OB
+struct : b -> StructBuilder a b v ()
+struct b = SB
   { encoders = []
   , decoder = (\_ -> Parser.mark |> Parser.map (\m -> (b, (), m)))
   , views = []
@@ -190,23 +190,23 @@ object b = OB
              like `.paramId` from the PLock example
   * `flabel`  - a string to label this field in views
   * `pb`      - a `Part` for the type of the field
-  * `(OB ob)` - the `ObjectBuilder` "so far"
+  * `(SB sb)` - the `StructBuilder` "so far"
 -}
 field :
   (a -> b) -> String -> Part b
-  -> ObjectBuilder a (b -> c) v x
-  -> ObjectBuilder a c v x
-field fext flabel pb (OB ob) =
-  OB
-    { encoders = ob.encoders ++ [fext >> pb.encoder]
+  -> StructBuilder a (b -> c) v x
+  -> StructBuilder a c v x
+field fext flabel pb (SB sb) =
+  SB
+    { encoders = sb.encoders ++ [fext >> pb.encoder]
     , decoder =
-        ob.decoder
+        sb.decoder
         >> Parser.andThen (\(fbc, x, m) ->
           pb.decoder
           |> Parser.map (\b -> (fbc b, x, m))
         )
-    , views = ob.views ++ [fext >> pb.view flabel]
-    , version = ob.version
+    , views = sb.views ++ [fext >> pb.view flabel]
+    , version = sb.version
     }
 
 {-| This is just like `field` but used when a version of a structure doesn't
@@ -215,16 +215,16 @@ and this provides that value.
 -}
 omitField :
   (a -> b) -> b
-  -> ObjectBuilder a (b -> c) v x
-  -> ObjectBuilder a c v x
-omitField fext b (OB ob) =
-  OB
-    { encoders = ob.encoders
+  -> StructBuilder a (b -> c) v x
+  -> StructBuilder a c v x
+omitField fext b (SB sb) =
+  SB
+    { encoders = sb.encoders
     , decoder =
-        ob.decoder
+        sb.decoder
         >> Parser.map (\(fbc, x, m) -> (fbc b, x, m))
-    , views = ob.views
-    , version = ob.version
+    , views = sb.views
+    , version = sb.version
     }
 
 {-| For the most part, elk-herd cares only about a few fields in each structure.
@@ -247,13 +247,13 @@ version-to-offset functions.
 -}
 skipTo :
   (a -> ByteArray) -> (x -> Maybe Int)
-  -> ObjectBuilder a (ByteArray -> c) v x
-  -> ObjectBuilder a c v x
-skipTo fext foff (OB ob) =
-  OB
-    { encoders = ob.encoders ++ [fext >> Builder.bytes]
+  -> StructBuilder a (ByteArray -> c) v x
+  -> StructBuilder a c v x
+skipTo fext foff (SB sb) =
+  SB
+    { encoders = sb.encoders ++ [fext >> Builder.bytes]
     , decoder =
-        ob.decoder
+        sb.decoder
         >> Parser.andThen (\(fbc, x, m) ->
           case foff x of
             Just offset ->
@@ -261,7 +261,7 @@ skipTo fext foff (OB ob) =
               |> Parser.map (\b -> (fbc b, x, m))
             Nothing -> Parser.fail "no offset for version"
         )
-    , views = ob.views ++ [ \a ->
+    , views = sb.views ++ [ \a ->
         [ Html.div [ Attr.class "field field-fullwidth" ]
           [ Html.span [ Attr.class "label" ] [ Html.text "skipped" ]
           , Html.span [ Attr.class "value hexdump" ]
@@ -272,7 +272,7 @@ skipTo fext foff (OB ob) =
             ]
           ]
         ]]
-    , version = ob.version
+    , version = sb.version
     }
 
 
@@ -280,37 +280,37 @@ skipTo fext foff (OB ob) =
 here until I decide to use it or not.
 
 offset : Int
-  -> ObjectBuilder a c v x
-  -> ObjectBuilder a c v x
-offset n (OB ob) =
-  OB
-  { encoders = ob.encoders
+  -> StructBuilder a c v x
+  -> StructBuilder a c v x
+offset n (SB sb) =
+  SB
+  { encoders = sb.encoders
   , decoder = \mv ->
-      ob.decoder mv
+      sb.decoder mv
       |> Parser.andThen (\(r, x, m) ->
         Parser.map (\_ -> (r, x, m)) (Parser.offset m n))
-  , views = ob.views
-  , version = ob.version
+  , views = sb.views
+  , version = sb.version
   }
 
 type alias Sizable = { bytes : ByteArray }
 
 size : Int
-  -> ObjectBuilder a Sizable v x
-  -> ObjectBuilder a Sizable v x
-size n (OB ob) =
-  OB
-  { encoders = ob.encoders
+  -> StructBuilder a Sizable v x
+  -> StructBuilder a Sizable v x
+size n (SB sb) =
+  SB
+  { encoders = sb.encoders
   , decoder = \mv ->
-      ob.decoder mv
+      sb.decoder mv
       |> Parser.andThen (\(r, x, m) ->
           Parser.jump m
           |> Parser.andThen (\_ ->
             Parser.nextBytes n
               |> Parser.andThen (\bs ->
                 Parser.succeed ({r|bytes=bs} , x, m))))
-  , views = ob.views
-  , version = ob.version
+  , views = sb.views
+  , version = sb.version
   }
 -}
 
@@ -323,19 +323,19 @@ This has one use: a `patternKit` has a version, but no version field. Instead,
 the version of it's first component, `pattern` provides it's version.
  -}
 versionStruct :
-  (a -> b) -> String -> VersionedPart v b -> (b -> v)
-  -> ObjectBuilder a (b -> c) v x
-  -> ObjectBuilder a c v v
-versionStruct fext flabel pb fver (OB ob) =
-  OB
-  { encoders = ob.encoders ++ [fext >> pb.encoder]
+  (a -> b) -> String -> Struct v b -> (b -> v)
+  -> StructBuilder a (b -> c) v x
+  -> StructBuilder a c v v
+versionStruct fext flabel pb fver (SB sb) =
+  SB
+  { encoders = sb.encoders ++ [fext >> pb.encoder]
   , decoder = \mv ->
-      ob.decoder mv
+      sb.decoder mv
       |> Parser.andThen (\(fbc, x, m) ->
         Maybe.unwrap pb.decoder pb.decoderVersion mv
         |> Parser.map (\b -> (fbc b, fver b, m))
       )
-  , views = ob.views ++ [fext >> pb.view flabel]
+  , views = sb.views ++ [fext >> pb.view flabel]
   , version = fext >> fver
   }
 
@@ -348,16 +348,16 @@ different value.
 -}
 version :
   (a -> v) -> String -> Part v
-  -> ObjectBuilder a (v -> c) v x
-  -> ObjectBuilder a c v v
-version fext flabel pb (OB ob) =
+  -> StructBuilder a (v -> c) v x
+  -> StructBuilder a c v v
+version fext flabel pb (SB sb) =
   let
-    (OB ob_) = field fext flabel pb (OB ob)
+    (SB ob_) = field fext flabel pb (SB sb)
   in
-    OB
+    SB
     { encoders = ob_.encoders
     , decoder =
-        ob.decoder
+        sb.decoder
         >> Parser.andThen (\(fbc, x, m) ->
           pb.decoder
           |> Parser.map (\b -> (fbc b, b, m))
@@ -374,27 +374,27 @@ TODO: This function's name isn't very clear
 -}
 fieldWithVersion :
   (a -> b) -> String -> (v -> Part b)
-  -> ObjectBuilder a (b -> c) v v
-  -> ObjectBuilder a c v v
-fieldWithVersion fext flabel fpb (OB ob) =
-  OB
-    { encoders = ob.encoders ++ [\a -> fext a |> (fpb (ob.version a)).encoder]
+  -> StructBuilder a (b -> c) v v
+  -> StructBuilder a c v v
+fieldWithVersion fext flabel fpb (SB sb) =
+  SB
+    { encoders = sb.encoders ++ [\a -> fext a |> (fpb (sb.version a)).encoder]
     , decoder =
-        ob.decoder
+        sb.decoder
         >> Parser.andThen (\(fbc, x, m) ->
           (fpb x).decoder
           |> Parser.map (\b -> (fbc b, x, m))
         )
-    , views = ob.views ++ [\a -> fext a |> (fpb (ob.version a)).view flabel]
-    , version = ob.version
+    , views = sb.views ++ [\a -> fext a |> (fpb (sb.version a)).view flabel]
+    , version = sb.version
     }
 
 {-| Declare a field, using the version to pick from a list of parts.
 -}
 variant :
   (a -> b) -> String -> List (v, Part b)
-  -> ObjectBuilder a (b -> c) v v
-  -> ObjectBuilder a c v v
+  -> StructBuilder a (b -> c) v v
+  -> StructBuilder a c v v
 variant fext flabel vars =
   let
     findVar v =
@@ -425,24 +425,24 @@ Notice the type signature for the argument:
 These two things ensure that you can't leave a field out, and you can't
 forget the version if the structure should have one.
 -}
-buildVersioned : ObjectBuilder a a v v -> VersionedPart v a
-buildVersioned (OB ob) =
-  { encoder = \o -> Builder.list (\e -> e o) ob.encoders
-  , decoder = Parser.map (\(r, _, _) -> r) (ob.decoder Nothing)
-  , decoderVersion = Parser.map (\(r, _, _) -> r) << ob.decoder << Just
+build : StructBuilder a a v v -> Struct v a
+build (SB sb) =
+  { encoder = \o -> Builder.list (\e -> e o) sb.encoders
+  , decoder = Parser.map (\(r, _, _) -> r) (sb.decoder Nothing)
+  , decoderVersion = Parser.map (\(r, _, _) -> r) << sb.decoder << Just
   , view = \label v ->
     [ Html.div [ Attr.class "field field-fullwidth" ]
       ([ Html.span [ Attr.class "label" ] [ Html.text label ]
       ]
-      ++ List.concatMap (\e -> e v) ob.views
+      ++ List.concatMap (\e -> e v) sb.views
       )
     ]
-  , version = ob.version
+  , version = sb.version
   }
 
 
 {-| For a non-versioned struct, this `build` ensures it is built.
 -}
-build : ObjectBuilder a a () () -> Part a
-build ob = fixedVersion (buildVersioned ob) ()
+buildAsPart : StructBuilder a a () () -> Part a
+buildAsPart sb = fixedVersion (build sb) ()
 

@@ -109,12 +109,12 @@ type alias PatternKit =
   , kit:       Kit
   }
 
-structPatternKit : ST.VersionedPart Int PatternKit
+structPatternKit : ST.Struct Int PatternKit
 structPatternKit =
-  ST.object PatternKit
+  ST.struct PatternKit
     |> ST.versionStruct     .pattern    "pattern"   structPattern .version
     |> ST.fieldWithVersion  .kit        "kit"       (ST.fixedVersion structKit)
-    |> ST.buildVersioned
+    |> ST.build
 
 
 
@@ -150,9 +150,9 @@ type alias Pattern =
   ,   skip2:        ByteArray
   }
 
-structPattern : ST.VersionedPart Int Pattern
+structPattern : ST.Struct Int Pattern
 structPattern =
-  ST.object Pattern
+  ST.struct Pattern
     |> ST.version .version      "version"     (Part.version "pattern" 0 9)
     |> ST.variant .tracks       "tracks"
         [ (0, Part.array 16 (structTrack 0))
@@ -171,7 +171,7 @@ structPattern =
     |> ST.skipTo  .skip1                      CppStructs.patternStorage_kitIndex
     |> ST.field   .kitIndex     "kitIndex"    Part.uint8
     |> ST.skipTo  .skip2                      CppStructs.patternStorage_sizeof
-    |> ST.buildVersioned
+    |> ST.build
 
 
 patternName : Pattern -> String
@@ -198,7 +198,7 @@ type alias Track =
 
 structTrack : Int -> Part Track
 structTrack v =
-  ST.object Track
+  ST.struct Track
     |> ST.field   .steps        "steps"       (Part.bytes 128)
     |> (case CppStructs.trackStorage_soundSlotLocks v of
           Nothing ->
@@ -210,7 +210,7 @@ structTrack v =
             >> ST.field .soundPLocks "soundPLocks" (Part.bytes 64)
     )
     |> ST.skipTo .skip2 (\_ -> CppStructs.trackStorage_sizeof v)
-    |> ST.build
+    |> ST.buildAsPart
 
 
 allSteps : List Int
@@ -264,11 +264,11 @@ type alias PLock =
 
 structPLock : Part PLock
 structPLock =
-  ST.object PLock
+  ST.struct PLock
     |> ST.field   .paramId    "paramId"   Part.uint8
     |> ST.field   .track      "track"     Part.uint8
     |> ST.field   .steps      "steps"     (Part.bytes 128)
-    |> ST.build
+    |> ST.buildAsPart
 
 plockSamplePLocks : Maybe Sound -> PLock -> Maybe (Array (Maybe Int))
 plockSamplePLocks sound plock =
@@ -314,9 +314,9 @@ type alias Kit =
   ,   skip3:         ByteArray
   }
 
-structKit : ST.VersionedPart Int Kit
+structKit : ST.Struct Int Kit
 structKit =
-  ST.object Kit
+  ST.struct Kit
     |> ST.version .version      "version"     (Part.version "kit" 0 9)
     |> ST.field   .name         "name"        (Part.chars 16)
     |> ST.skipTo  .skip1                      CppStructs.kitStorage_trackSounds
@@ -346,7 +346,7 @@ structKit =
         , (9, Part.array 8 <| ST.fixedVersion structMidiSetup 1)
         ]
     |> ST.skipTo  .skip3                    CppStructs.kitStorage_sizeof
-    |> ST.buildVersioned
+    |> ST.build
 
 setKitName : String -> Kit -> Kit
 setKitName s kit = { kit | name = s }
@@ -400,9 +400,9 @@ type alias Sound =
   ,   skip3:        ByteArray
   }
 
-structSound : ST.VersionedPart Int Sound
+structSound : ST.Struct Int Sound
 structSound =
-  ST.object Sound
+  ST.struct Sound
     |> ST.field   .magicHead    "magicHead"   (Part.magicHead)
     |> ST.version .version      "version"     (Part.version "sound" 0 2)
     |> ST.field   .tagMask      "tagMask"     Part.uint32be
@@ -412,7 +412,7 @@ structSound =
     |> ST.skipTo  .skip2                      CppStructs.soundStorage_sampleFile
     |> ST.field   .sample       "sample"      structSample
     |> ST.skipTo  .skip3                      CppStructs.soundStorage_sizeof
-    |> ST.buildVersioned
+    |> ST.build
 
 sameSound : Sound -> Sound -> Bool
 sameSound a b =
@@ -458,14 +458,14 @@ type alias MidiSetup =
   ,   skip2:        ByteArray
   }
 
-structMidiSetup : ST.VersionedPart Int MidiSetup
+structMidiSetup : ST.Struct Int MidiSetup
 structMidiSetup =
-  ST.object MidiSetup
+  ST.struct MidiSetup
     |> ST.version .version      "version"     (Part.version "midi setup" 0 1)
     |> ST.skipTo  .skip1                      CppStructs.midiSetupStorage_enableMask
     |> ST.field   .enableMask   "enableMask"  Part.uint16be
     |> ST.skipTo  .skip2                      CppStructs.midiSetupStorage_sizeof
-    |> ST.buildVersioned
+    |> ST.build
 
 
 midiTrackEnabled : MidiSetup -> Bool
@@ -485,14 +485,14 @@ type alias ProjectSettings =
   ,   skip2:        ByteArray
   }
 
-structProjectSettings : ST.VersionedPart Int ProjectSettings
+structProjectSettings : ST.Struct Int ProjectSettings
 structProjectSettings =
-  ST.object ProjectSettings
+  ST.struct ProjectSettings
     |> ST.version .version      "version"     (Part.version "settings" 0 7)
     |> ST.skipTo  .skip1                      CppStructs.projectSettingsStorage_sampleList
     |> ST.field   .samples      "samples"     (Part.array 128 structSample)
     |> ST.skipTo  .skip2                      CppStructs.projectSettingsStorage_sizeof
-    |> ST.buildVersioned
+    |> ST.build
 
 
 --
@@ -512,12 +512,12 @@ type alias Sample =
 
 structSample : Part Sample
 structSample =
-  ST.object Sample
+  ST.struct Sample
     |> ST.field     .inode    "inode"     Part.uint32be
     |> ST.field     .hash     "hash"      Part.uint32be
     |> ST.field     .filesize "filesize"  Part.uint32be
     |> ST.field     .seqnr    "seqnr"     Part.uint32be
-    |> ST.build
+    |> ST.buildAsPart
 
 inodeInvalid : Int
 inodeInvalid = 0xffffffff

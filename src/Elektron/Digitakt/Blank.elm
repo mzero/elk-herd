@@ -45,7 +45,7 @@ prepDataCompressed =
     (ByteArray.fromList >> ByteArray.Compression.decompress)
 
 
-buildBlank : ST.VersionedPart v a -> v -> Maybe ByteArray -> Maybe a
+buildBlank : ST.Struct v a -> v -> Maybe ByteArray -> Maybe a
 buildBlank struct v =
   Maybe.andThen (Parser.parse (struct.decoderVersion v) >> Result.toMaybe)
 
