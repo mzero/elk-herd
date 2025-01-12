@@ -107,13 +107,13 @@ We can create a `Part` for this like so:
 
     structPLock : Part PLock
     structPLock =
-      object PLock
+      struct PLock
         |> field   .paramId    "paramId"   uint8
         |> field   .track      "track"     uint8
         |> field   .steps      "steps"     (array 64 uint16be)
         |> build
 
-The `object Plock` starts building a `Part`, but is "partially constructed".
+The `struct Plock` starts building a `Part`, but is "partially constructed".
 Each call to `field` adds more to the partial construction adding:
 
   * how to extract and encode the field
