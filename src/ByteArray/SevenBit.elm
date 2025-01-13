@@ -23,25 +23,18 @@ import Bitwise
 import ByteArray exposing (ByteArray)
 
 
+
 -- encode a byte array in 7-bit encoding
 encode : ByteArray -> ByteArray
-encode = ByteArray.fromArray << encodeArray << ByteArray.toArray
-
--- decode 7-bit encoded data
-decode : ByteArray -> ByteArray
-decode = ByteArray.fromArray << decodeArray << ByteArray.toArray
-
-
-encodeArray : Array Int -> Array Int
-encodeArray data8 =
+encode data8 =
   let
-    len8 = Array.length data8
+    len8 = ByteArray.length data8
     len7 = len8 + (len8 + 6) // 7
 
     -- these functions are written for efficiency, not clarity
 
     lobits i =
-      case Array.get i data8 of
+      case ByteArray.get i data8 of
         Nothing -> 0
         Just v  -> Bitwise.and v 0x7f
 
@@ -49,7 +42,7 @@ encodeArray data8 =
       if i >= j
         then a
         else
-          case Array.get i data8 of
+          case ByteArray.get i data8 of
             Nothing -> hibits (i + 1) j (a + a)
             Just v  -> hibits (i + 1) j (a + a + v // 128)
 
@@ -62,15 +55,16 @@ encodeArray data8 =
           then hibits group (group + 7) 0
           else lobits (group + index - 1)
   in
-    Array.initialize len7 byte
+    ByteArray.fromArray <| Array.initialize len7 byte
 
 
-decodeArray : Array Int -> Array Int
-decodeArray ai7 =
+-- decode 7-bit encoded data
+decode : ByteArray -> ByteArray
+decode ai7 =
   let
-    inLen = Array.length ai7
+    inLen = ByteArray.length ai7
     outLen = (inLen // 8 * 7) + (clamp 0 7 (modBy 8 inLen - 1))
-    at i = Maybe.withDefault 0 (Array.get i ai7)
+    at i = Maybe.withDefault 0 (ByteArray.get i ai7)
 
     i8 i =
       let
@@ -82,5 +76,5 @@ decodeArray ai7 =
       in
         Bitwise.or hi lo
   in
-    Array.initialize outLen i8
+    ByteArray.fromArray <| Array.initialize outLen i8
 
