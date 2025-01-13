@@ -269,22 +269,14 @@ structTrack =
   ST.struct Track
     |> ST.version .version      "version"     Version.external
     |> ST.field   .steps        "steps"       (Part.bytes 128)
-    |> ST.skipTo  .skip1  (.int >> CppStructs.trackStorage_soundSlotLocks)
+    |> ST.skipToOrOmit
+                  .skip1  (.int >> CppStructs.trackStorage_soundSlotLocks)
     |> ST.fieldV  .soundPLocks  "soundPLocks"
                                               (\v ->
                                                 if Maybe.isJust (CppStructs.trackStorage_soundSlotLocks v.int)
                                                   then (Part.bytes 64)
-                                                  else (Part.bytes 0)
+                                                  else (Part.ephemeral ByteArray.empty)
                                               )
-    -- |> (case CppStructs.trackStorage_soundSlotLocks v of
-    --       Nothing ->
-    --            ST.omitField .skip1 ByteArray.empty
-    --         >> ST.omitField .soundPLocks ByteArray.empty
-
-    --       Just offset ->
-    --            ST.skipTo .skip1 (\_ -> Just offset)
-    --         >> ST.field .soundPLocks "soundPLocks" (Part.bytes 64)
-    -- )
     |> ST.skipTo .skip2 (.int >> CppStructs.trackStorage_sizeof)
     |> ST.build
 

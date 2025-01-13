@@ -10,7 +10,7 @@ module Elektron.Struct.Part exposing
   , list, array
   , map
 
-  , const
+  , const, ephemeral
 
   , magicHead, magicTail
   , fail
@@ -136,6 +136,16 @@ const c desc pa =
       )
   , view = pa.view
   }
+
+{-| A part that isn't serialized or viewed.
+-}
+ephemeral : a -> Part a
+ephemeral a =
+  { encoder = \_ -> Builder.empty
+  , decoder = Parser.succeed a
+  , view = \label v -> [ ]
+  }
+
 
 list : Int -> Part a -> Part (List a)
 list n pa =

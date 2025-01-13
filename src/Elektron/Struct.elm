@@ -5,7 +5,7 @@ module Elektron.Struct exposing
   , struct
   , field, fieldV
   , omitField
-  , skipTo
+  , skipTo, skipToOrOmit
   , version
   , build
   , buildAsPart
@@ -263,11 +263,12 @@ an offset. This is because the offset needed can vary with the version of
 the structure. See the module `Elektron.Digitakt.CppStructs` for these
 version-to-offset functions.
 -}
-skipTo :
+skipTo_ :
+  Bool ->
   (a -> ByteArray) -> (v -> Maybe Int)
   -> StructBuilder a (ByteArray -> c) w v v
   -> StructBuilder a c w v v
-skipTo fext foff (SB sb) =
+skipTo_ omit fext foff (SB sb) =
   SB
     { encoders = sb.encoders ++ [fext >> Builder.bytes]
     , decoder =
@@ -277,9 +278,10 @@ skipTo fext foff (SB sb) =
             Just offset ->
               Parser.upToOffset m offset
               |> Parser.map (\b -> (fbc b, v, m))
-            -- Nothing -> Parser.fail "no offset for version"
-            -- FIXME: Shouldn't have to do this!
-            Nothing -> Parser.succeed (fbc ByteArray.empty, v, m)
+            Nothing ->
+              if omit
+                then Parser.succeed (fbc ByteArray.empty, v, m)
+                else Parser.fail "no offset for version"
         )
     , views = sb.views ++ [ \a ->
         [ Html.div [ Attr.class "field field-fullwidth" ]
@@ -295,6 +297,19 @@ skipTo fext foff (SB sb) =
     , version = sb.version
     }
 
+skipTo :
+  (a -> ByteArray)
+  -> (v -> Maybe Int)
+  -> StructBuilder a (ByteArray -> c) w v v
+  -> StructBuilder a c w v v
+skipTo = skipTo_ False
+
+skipToOrOmit :
+  (a -> ByteArray)
+  -> (v -> Maybe Int)
+  -> StructBuilder a (ByteArray -> c) w v v
+  -> StructBuilder a c w v v
+skipToOrOmit = skipTo_ True
 
 {-| This is very similar to `field`, only this is the field that supplies the
 version of this object. Rather than a `Part b`, this takes a `Struct w v b`
