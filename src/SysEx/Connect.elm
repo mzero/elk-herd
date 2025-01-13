@@ -20,7 +20,7 @@ import Html
 import Html.Attributes as Attr
 import Html.Events as Events
 
-import Elektron.Instrument as EI exposing (Instrument)
+import Elektron.Instrument as EI exposing (Instrument, Device(..))
 import SysEx.Client exposing (..)
 import SysEx.Message as M exposing (ElkMessage)
 
@@ -116,7 +116,7 @@ update msg model =
       Response id (M.DeviceResponse productId msgs deviceName) ->
         onProbeResponse id <|
           let
-            inst = Instrument productId deviceName msgs "????" "?.??"
+            inst = EI.fromDeviceResponse productId msgs deviceName
             model_ = { model | result = WaitingForVersion inst }
           in
             makeRequest M.VersionRequest model_

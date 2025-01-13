@@ -12,170 +12,224 @@ Mark for it, and he can generate it for you.
 
 -}
 
-patternStorage_kitIndex : Int -> Maybe Int
-patternStorage_kitIndex v = case v of
-  0 -> Just 22896
-  1 -> Just 24944
-  2 -> Just 24944
-  3 -> Just 24976
-  4 -> Just 24976
-  5 -> Just 24976
-  6 -> Just 24976
-  7 -> Just 24992
-  8 -> Just 24992
-  9 -> Just 25008
-  _ -> Nothing
+import Elektron.Instrument exposing (Device(..))
+import Elektron.Struct.Version exposing (Version)
+
+patternStorage_kitIndex : Version -> Maybe Int
+patternStorage_kitIndex v =
+  case (v.device, v.int) of
+    (Digitakt, 0) -> Just 22896
+    (Digitakt, 1) -> Just 24944
+    (Digitakt, 2) -> Just 24944
+    (Digitakt, 3) -> Just 24976
+    (Digitakt, 4) -> Just 24976
+    (Digitakt, 5) -> Just 24976
+    (Digitakt, 6) -> Just 24976
+    (Digitakt, 7) -> Just 24992
+    (Digitakt, 8) -> Just 24992
+    (Digitakt, 9) -> Just 25008
+    (Digitakt2, 0) -> Just 55984
+    (Digitakt2, 1) -> Just 88752
+    (Digitakt2, 2) -> Just 88752
+    _ -> Nothing
 
 
-patternStorage_sizeof : Int -> Maybe Int
-patternStorage_sizeof v = case v of
-  0 -> Just 23040
-  1 -> Just 25088
-  2 -> Just 25088
-  3 -> Just 25088
-  4 -> Just 25088
-  5 -> Just 25088
-  6 -> Just 25088
-  7 -> Just 25088
-  8 -> Just 25088
-  9 -> Just 25088
-  _ -> Nothing
+patternStorage_sizeof : Version -> Maybe Int
+patternStorage_sizeof v =
+  case (v.device, v.int) of
+    (Digitakt, 0) -> Just 23040
+    (Digitakt, 1) -> Just 25088
+    (Digitakt, 2) -> Just 25088
+    (Digitakt, 3) -> Just 25088
+    (Digitakt, 4) -> Just 25088
+    (Digitakt, 5) -> Just 25088
+    (Digitakt, 6) -> Just 25088
+    (Digitakt, 7) -> Just 25088
+    (Digitakt, 8) -> Just 25088
+    (Digitakt, 9) -> Just 25088
+    (Digitakt2, 0) -> Just 56320
+    (Digitakt2, 1) -> Just 89088
+    (Digitakt2, 2) -> Just 89088
+    _ -> Nothing
 
 
-trackStorage_soundSlotLocks : Int -> Maybe Int
-trackStorage_soundSlotLocks v = case v of
-  1 -> Just 832
-  2 -> Just 832
-  3 -> Just 832
-  4 -> Just 832
-  5 -> Just 832
-  _ -> Nothing
+trackStorage_soundSlotLocks : Version -> Maybe Int
+trackStorage_soundSlotLocks v =
+  case (v.device, v.int) of
+    (Digitakt, 1) -> Just 832
+    (Digitakt, 2) -> Just 832
+    (Digitakt, 3) -> Just 832
+    (Digitakt, 4) -> Just 832
+    (Digitakt, 5) -> Just 832
+    (Digitakt2, 0) -> Just 1920
+    (Digitakt2, 1) -> Just 1024
+    _ -> Nothing
 
 
-trackStorage_sizeof : Int -> Maybe Int
-trackStorage_sizeof v = case v of
-  0 -> Just 779
-  1 -> Just 907
-  2 -> Just 909
-  3 -> Just 909
-  4 -> Just 910
-  5 -> Just 911
-  _ -> Nothing
+trackStorage_sizeof : Version -> Maybe Int
+trackStorage_sizeof v =
+  case (v.device, v.int) of
+    (Digitakt, 0) -> Just 779
+    (Digitakt, 1) -> Just 907
+    (Digitakt, 2) -> Just 909
+    (Digitakt, 3) -> Just 909
+    (Digitakt, 4) -> Just 910
+    (Digitakt, 5) -> Just 911
+    (Digitakt2, 0) -> Just 2207
+    (Digitakt2, 1) -> Just 1183
+    _ -> Nothing
 
 
-
-kitStorage_trackSounds : Int -> Maybe Int
-kitStorage_trackSounds v = case v of
-  0 -> Just 36
-  1 -> Just 36
-  2 -> Just 36
-  3 -> Just 36
-  4 -> Just 36
-  5 -> Just 36
-  6 -> Just 36
-  7 -> Just 36
-  8 -> Just 36
-  9 -> Just 36
-  _ -> Nothing
-
-
-kitStorage_midiParams : Int -> Maybe Int
-kitStorage_midiParams v = case v of
-  0 -> Just 1424
-  1 -> Just 1424
-  2 -> Just 1424
-  3 -> Just 1424
-  4 -> Just 1424
-  5 -> Just 1424
-  6 -> Just 1424
-  7 -> Just 1424
-  8 -> Just 1424
-  9 -> Just 1424
-  _ -> Nothing
+kitStorage_trackSounds : Version -> Maybe Int
+kitStorage_trackSounds v =
+  case (v.device, v.int) of
+    (Digitakt, 0) -> Just 36
+    (Digitakt, 1) -> Just 36
+    (Digitakt, 2) -> Just 36
+    (Digitakt, 3) -> Just 36
+    (Digitakt, 4) -> Just 36
+    (Digitakt, 5) -> Just 36
+    (Digitakt, 6) -> Just 36
+    (Digitakt, 7) -> Just 36
+    (Digitakt, 8) -> Just 36
+    (Digitakt, 9) -> Just 36
+    (Digitakt2, 0) -> Just 60
+    (Digitakt2, 1) -> Just 60
+    (Digitakt2, 2) -> Just 60
+    _ -> Nothing
 
 
-kitStorage_sizeof : Int -> Maybe Int
-kitStorage_sizeof v = case v of
-  0 -> Just 2560
-  1 -> Just 2560
-  2 -> Just 2560
-  3 -> Just 2560
-  4 -> Just 2560
-  5 -> Just 2560
-  6 -> Just 2560
-  7 -> Just 2560
-  8 -> Just 2560
-  9 -> Just 2560
-  _ -> Nothing
+kitStorage_midiParams : Version -> Maybe Int
+kitStorage_midiParams v =
+  case (v.device, v.int) of
+    (Digitakt, 0) -> Just 1424
+    (Digitakt, 1) -> Just 1424
+    (Digitakt, 2) -> Just 1424
+    (Digitakt, 3) -> Just 1424
+    (Digitakt, 4) -> Just 1424
+    (Digitakt, 5) -> Just 1424
+    (Digitakt, 6) -> Just 1424
+    (Digitakt, 7) -> Just 1424
+    (Digitakt, 8) -> Just 1424
+    (Digitakt, 9) -> Just 1424
+    (Digitakt2, 0) -> Just 5004
+    (Digitakt2, 1) -> Just 5644
+    (Digitakt2, 2) -> Just 5644
+    _ -> Nothing
 
 
-midiSetupStorage_enableMask : Int -> Maybe Int
-midiSetupStorage_enableMask v = case v of
-  0 -> Just 100
-  1 -> Just 100
-  _ -> Nothing
+kitStorage_sizeof : Version -> Maybe Int
+kitStorage_sizeof v =
+  case (v.device, v.int) of
+    (Digitakt, 0) -> Just 2560
+    (Digitakt, 1) -> Just 2560
+    (Digitakt, 2) -> Just 2560
+    (Digitakt, 3) -> Just 2560
+    (Digitakt, 4) -> Just 2560
+    (Digitakt, 5) -> Just 2560
+    (Digitakt, 6) -> Just 2560
+    (Digitakt, 7) -> Just 2560
+    (Digitakt, 8) -> Just 2560
+    (Digitakt, 9) -> Just 2560
+    (Digitakt2, 0) -> Just 9728
+    (Digitakt2, 1) -> Just 10240
+    (Digitakt2, 2) -> Just 10240
+    _ -> Nothing
 
 
-midiSetupStorage_sizeof : Int -> Maybe Int
-midiSetupStorage_sizeof v = case v of
-  0 -> Just 108
-  1 -> Just 108
-  _ -> Nothing
+midiSetupStorage_enableMask : Version -> Maybe Int
+midiSetupStorage_enableMask v =
+  case (v.device, v.int) of
+    (Digitakt, 0) -> Just 100
+    (Digitakt, 1) -> Just 100
+    (Digitakt2, 0) -> Just 256
+    (Digitakt2, 1) -> Just 256
+    _ -> Nothing
 
 
-soundStorage_sampleSlot : Int -> Maybe Int
-soundStorage_sampleSlot v = case v of
-  0 -> Just 52
-  1 -> Just 68
-  2 -> Just 68
-  _ -> Nothing
+midiSetupStorage_sizeof : Version -> Maybe Int
+midiSetupStorage_sizeof v =
+  case (v.device, v.int) of
+    (Digitakt, 0) -> Just 108
+    (Digitakt, 1) -> Just 108
+    (Digitakt2, 0) -> Just 268
+    (Digitakt2, 1) -> Just 268
+    _ -> Nothing
 
 
-soundStorage_sampleFile : Int -> Maybe Int
-soundStorage_sampleFile v = case v of
-  0 -> Just 132
-  1 -> Just 132
-  2 -> Just 132
-  _ -> Nothing
+soundStorage_sampleSlot : Version -> Maybe Int
+soundStorage_sampleSlot v =
+  case (v.device, v.int) of
+    (Digitakt, 0) -> Just 52
+    (Digitakt, 1) -> Just 68
+    (Digitakt, 2) -> Just 68
+    (Digitakt2, 0) -> Just 100
+    (Digitakt2, 1) -> Just 100
+    _ -> Nothing
 
 
-soundStorage_sizeof : Int -> Maybe Int
-soundStorage_sizeof v = case v of
-  0 -> Just 160
-  1 -> Just 160
-  2 -> Just 160
-  _ -> Nothing
+soundStorage_sampleFile : Version -> Maybe Int
+soundStorage_sampleFile v =
+  case (v.device, v.int) of
+    (Digitakt, 0) -> Just 132
+    (Digitakt, 1) -> Just 132
+    (Digitakt, 2) -> Just 132
+    (Digitakt2, 0) -> Just 279
+    (Digitakt2, 1) -> Just 295
+    _ -> Nothing
 
 
-soundParameters_sampleParamId : Int -> Maybe Int
-soundParameters_sampleParamId v = case v of
-  0 -> Just 12
-  1 -> Just 20
-  2 -> Just 20
-  _ -> Nothing
+soundStorage_sizeof : Version -> Maybe Int
+soundStorage_sizeof v =
+  case (v.device, v.int) of
+    (Digitakt, 0) -> Just 160
+    (Digitakt, 1) -> Just 160
+    (Digitakt, 2) -> Just 160
+    (Digitakt2, 0) -> Just 299
+    (Digitakt2, 1) -> Just 339
+    _ -> Nothing
 
 
-projectSettingsStorage_sampleList : Int -> Maybe Int
-projectSettingsStorage_sampleList v = case v of
-  0 -> Just 69
-  1 -> Just 70
-  2 -> Just 70
-  3 -> Just 70
-  4 -> Just 70
-  5 -> Just 70
-  6 -> Just 70
-  7 -> Just 70
-  _ -> Nothing
+soundParameters_sampleParamId : Version -> Maybe Int
+soundParameters_sampleParamId v =
+  case (v.device, v.int) of
+    (Digitakt, 0) -> Just 12
+    (Digitakt, 1) -> Just 20
+    (Digitakt, 2) -> Just 20
+    (Digitakt2, 0) -> Just 36
+    (Digitakt2, 1) -> Just 36
+    _ -> Nothing
 
 
-projectSettingsStorage_sizeof : Int -> Maybe Int
-projectSettingsStorage_sizeof v = case v of
-  0 -> Just 2560
-  1 -> Just 2560
-  2 -> Just 2560
-  3 -> Just 2560
-  4 -> Just 2560
-  5 -> Just 2560
-  6 -> Just 2560
-  7 -> Just 2560
-  _ -> Nothing
+projectSettingsStorage_sampleList : Version -> Maybe Int
+projectSettingsStorage_sampleList v =
+  case (v.device, v.int) of
+    (Digitakt, 0) -> Just 69
+    (Digitakt, 1) -> Just 70
+    (Digitakt, 2) -> Just 70
+    (Digitakt, 3) -> Just 70
+    (Digitakt, 4) -> Just 70
+    (Digitakt, 5) -> Just 70
+    (Digitakt, 6) -> Just 70
+    (Digitakt, 7) -> Just 70
+    (Digitakt2, 0) -> Just 251
+    (Digitakt2, 1) -> Just 251
+    _ -> Nothing
+
+
+projectSettingsStorage_sizeof : Version -> Maybe Int
+projectSettingsStorage_sizeof v =
+  case (v.device, v.int) of
+    (Digitakt, 0) -> Just 2560
+    (Digitakt, 1) -> Just 2560
+    (Digitakt, 2) -> Just 2560
+    (Digitakt, 3) -> Just 2560
+    (Digitakt, 4) -> Just 2560
+    (Digitakt, 5) -> Just 2560
+    (Digitakt, 6) -> Just 2560
+    (Digitakt, 7) -> Just 2560
+    (Digitakt2, 0) -> Just 16896
+    (Digitakt2, 1) -> Just 16896
+    _ -> Nothing
+
+

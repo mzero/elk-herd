@@ -30,7 +30,10 @@ import ByteArray.Builder as Builder
 import ByteArray.Parser as Parser
 import ByteArray.SevenBit
 import Elektron.Digitakt.Dump as DT
+import Elektron.Instrument exposing (Device(..))
+import Elektron.Struct.Version as Version
 import SysEx.Internal exposing (..)
+import List exposing (sum)
 
 {-| Dump messages come in request and response pairs. These all refer to the
 current loaded project. The reqeusts with `Int` specify the slot number to
@@ -82,7 +85,14 @@ uint14equal a b = (Bitwise.and 0x3fff a) == (Bitwise.and 0x3fff b)
 
 
 sumBytes : ByteArray -> Int
-sumBytes = Array.foldl (+) 0 << ByteArray.toArray
+sumBytes ba =
+  let
+    sum i acc =
+      case ByteArray.get i ba of
+        Just v -> sum (i + 1) (acc + v)
+        Nothing -> acc
+  in
+    sum 0 0
 
 
 parsePayload : ByteArray -> Parser.Parser ByteArray
@@ -109,16 +119,18 @@ parseStruct type_ index content =
     parseResponse fn p = Parser.map fn (Parser.map2 always p Parser.atEnd)
     parseRequest v = Parser.map (always v) Parser.atEnd
 
+    spec = Version.MatchDevice Digitakt
+
     parser = case type_ of
-        0x50 -> parseResponse (DTPatternKitResponse index)  DT.structPatternKit.decoder
+        0x50 -> parseResponse (DTPatternKitResponse index)  (DT.structPatternKit.decoder spec)
         0x60 -> parseRequest  (DTPatternKitRequest index)
-        0x51 -> parseResponse (DTPatternResponse index)     DT.structPattern.decoder
+        0x51 -> parseResponse (DTPatternResponse index)     (DT.structPattern.decoder spec)
         0x61 -> parseRequest  (DTPatternRequest index)
-        0x52 -> parseResponse (DTKitResponse index)         DT.structKit.decoder
+        0x52 -> parseResponse (DTKitResponse index)         (DT.structKit.decoder spec)
         0x62 -> parseRequest  (DTKitRequest index)
-        0x53 -> parseResponse (DTSoundResponse index)       DT.structSound.decoder
+        0x53 -> parseResponse (DTSoundResponse index)       (DT.structSound.decoder spec)
         0x63 -> parseRequest  (DTSoundRequest index)
-        0x54 -> parseResponse (DTProjectSettingsResponse)   DT.structProjectSettings.decoder
+        0x54 -> parseResponse (DTProjectSettingsResponse)   (DT.structProjectSettings.decoder spec)
         0x64 -> parseRequest  (DTProjectSettingsRequest)
         0x6f -> parseRequest  (DTWholeProjectRequest)
         _ -> Parser.succeed (Unknown type_ index content)
@@ -143,7 +155,7 @@ dumpBuilder ed =
       let
         content = Builder.build contentBuilder
         payload = ByteArray.SevenBit.encode content
-        checksum = Array.foldl (+) 0 (ByteArray.toArray payload)
+        checksum = sumBytes payload
         count = ByteArray.length payload + 5
       in
         Builder.sequence

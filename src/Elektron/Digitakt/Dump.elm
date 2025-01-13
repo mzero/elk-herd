@@ -31,6 +31,8 @@ module Elektron.Digitakt.Dump exposing
   , isEmptySample
   , sampleLength
 
+  , StorageStruct
+
   , structPatternKit
   , structPattern
   , structKit
@@ -63,42 +65,13 @@ import Array exposing (Array)
 import Bitwise
 
 import ByteArray exposing (ByteArray)
-import ByteArray.Parser as Parser
 import Elektron.Digitakt.CppStructs as CppStructs
-import Elektron.StructUtil as SU
+import Elektron.Instrument exposing (Device(..))
+import Elektron.Struct as ST
+import Elektron.Struct.Part as Part exposing (Part)
+import Elektron.Struct.Version as Version exposing (Version, VersionSpec(..))
 import Missing.Maybe as Maybe
-import Util
-
-{-| Just like uint32be, but it checks that it is in the supported range.
--}
-version : String -> Int -> Int -> SU.Part Int
-version t lo hi =
-  let
-    pbase = SU.uint32be
-    errorMsg v =
-      t ++ " version " ++ String.fromInt v
-      ++ " out of supported range "
-      ++ String.fromInt lo ++ " ~ " ++ String.fromInt hi
-  in
-    { pbase
-    | decoder =
-        pbase.decoder |> Parser.andThen (\v ->
-          if lo <= v && v <= hi
-            then Parser.succeed v
-            else Parser.fail (errorMsg v)
-          )
-    }
-
-magicHead : Int
-magicHead = 0xbeefbace
-
-magicTail : Int
-magicTail = 0xbacef00c
-
-{-| A field that always has a constant, magic value.
--}
-magic : Int -> SU.Part Int
-magic x = SU.const x ("magic " ++ Util.hexBytesString x) SU.uint32be
+import Html exposing (main_)
 
 
 {- Structure names follow Elektron's header files names for these structures.
@@ -130,6 +103,66 @@ The names used in the Digitakt UI differ somewhat.
     ProjectSettings   Project         projectSettings
 -}
 
+type alias StorageStruct s =
+  ST.Struct VersionSpec Version s
+
+
+{- It is very common for one structure to include another structure, or an
+array of another structure.  In either case, the version of the parent
+structure determines the version of the child structure.
+
+`List SubStructMap` provides for a mapping of such a relationship. Use
+`subStruct` or `subStructArray` to build such a child Part.
+-}
+
+
+type alias SubStructMap a = { a | device : Device, parent : Int, child : Int }
+
+{-| Lookup an entry for a version, then pass that entry plus a VersionSpec
+for the child to a function for creating the Part. If none found, return
+Part.fail
+-}
+subStruct :
+  List (SubStructMap a)
+  -> ((SubStructMap a) ->  VersionSpec -> Part c)
+  -> Version
+  -> Part c
+subStruct mapping fPart v =
+  let
+    go items =
+      case items of
+        [] ->
+          Part.fail ("No mapping from v" ++ String.fromInt v.int)
+        m :: rest ->
+          if m.device == v.device && m.parent == v.int
+            then fPart m <| MatchVersion <| Version m.device m.child
+            else go rest
+  in
+    go mapping
+
+
+type alias SubStructArrayMap = SubStructMap { n : Int }
+
+{-| Like subStruct, but create an array of a particular Struct. The size of
+the array is in the lookup table entry as `n`.
+-}
+subStructArray :
+  List SubStructArrayMap
+  -> StorageStruct s
+  -> Version
+  -> Part (Array s)
+subStructArray mapping struct =
+  subStruct mapping
+    (\args childSpec -> Part.array args.n <| ST.forVersionSpec struct childSpec)
+
+
+numSteps : Version -> Maybe Int
+numSteps v =
+  case v.device of
+      Digitakt  -> Just  64
+      Digitakt2 -> Just 128
+      _         -> Nothing
+
 --
 -- PATTERN
 --    corresponds to nothing - it is a pair of dumps given in response to
@@ -141,12 +174,12 @@ type alias PatternKit =
   , kit:       Kit
   }
 
-structPatternKit : SU.VersionedPart Int PatternKit
+structPatternKit : StorageStruct PatternKit
 structPatternKit =
-  SU.object PatternKit
-    |> SU.versionStruct     .pattern    "pattern"   structPattern .version
-    |> SU.fieldWithVersion  .kit        "kit"       (SU.fixedVersion structKit)
-    |> SU.buildVersioned
+  ST.struct PatternKit
+    |> ST.version   .pattern    "pattern"   structPattern
+    |> ST.fieldV    .kit        "kit"       (MatchVersion >> ST.forVersionSpec structKit)
+    |> ST.build "PatternKit"
 
 
 
@@ -173,7 +206,7 @@ setPatternKitName s patternKit =
 --
 
 type alias Pattern =
-  { version:      Int                 -- should be 4
+  { version:      Version
   , tracks:       Array Track         -- 16 x
   , pLocks:       Array PLock         -- 80 x
   , name:         String              -- 1st part of patternSettingsStorage
@@ -182,29 +215,43 @@ type alias Pattern =
   ,   skip2:        ByteArray
   }
 
-structPattern : SU.VersionedPart Int Pattern
+structPattern : StorageStruct Pattern
 structPattern =
-  SU.object Pattern
-    |> SU.version .version      "version"     (version "pattern" 0 9)
-    |> SU.variant .tracks       "tracks"
-        [ (0, SU.array 16 (structTrack 0))
-        , (1, SU.array 16 (structTrack 1))
-        , (2, SU.array 16 (structTrack 1))
-        , (3, SU.array 16 (structTrack 2))
-        , (4, SU.array 16 (structTrack 2))
-        , (5, SU.array 16 (structTrack 3))
-        , (6, SU.array 16 (structTrack 3))
-        , (7, SU.array 16 (structTrack 4))
-        , (8, SU.array 16 (structTrack 4))
-        , (9, SU.array 16 (structTrack 5))
-        ]
-    |> SU.field   .pLocks       "pLocks"      (SU.array 80 structPLock)
-    |> SU.field   .name         "name"        (SU.chars 16)
-    |> SU.skipTo  .skip1                      CppStructs.patternStorage_kitIndex
-    |> SU.field   .kitIndex     "kitIndex"    SU.uint8
-    |> SU.skipTo  .skip2                      CppStructs.patternStorage_sizeof
-    |> SU.buildVersioned
+  ST.struct Pattern
+    |> ST.version .version      "version"     Version.uint32be
+    |> ST.fieldV  .tracks       "tracks"      (subStructArray mapPatternVersionToTracks structTrack)
+    |> ST.fieldV  .pLocks       "pLocks"      (\v ->
+                                                Part.array 80
+                                                <| ST.forVersionSpec structPLock
+                                                <| patternToPlockVersion v
+                                              )
+    |> ST.field   .name         "name"        (Part.chars 16)
+    |> ST.skipTo  .skip1                      CppStructs.patternStorage_kitIndex
+    |> ST.field   .kitIndex     "kitIndex"    Part.uint8
+    |> ST.skipTo  .skip2                      CppStructs.patternStorage_sizeof
+    |> ST.build "Pattern"
 
+patternToPlockVersion : Version -> VersionSpec
+patternToPlockVersion v = MatchVersion (Version v.device 0)
+
+
+mapPatternVersionToTracks : List SubStructArrayMap
+mapPatternVersionToTracks =
+  [ { device = Digitakt, parent = 0, child = 0, n = 16 }
+  , { device = Digitakt, parent = 1, child = 1, n = 16 }
+  , { device = Digitakt, parent = 2, child = 1, n = 16 }
+  , { device = Digitakt, parent = 3, child = 2, n = 16 }
+  , { device = Digitakt, parent = 4, child = 2, n = 16 }
+  , { device = Digitakt, parent = 5, child = 3, n = 16 }
+  , { device = Digitakt, parent = 6, child = 3, n = 16 }
+  , { device = Digitakt, parent = 7, child = 4, n = 16 }
+  , { device = Digitakt, parent = 8, child = 4, n = 16 }
+  , { device = Digitakt, parent = 9, child = 5, n = 16 }
+
+  , { device = Digitakt2, parent = 0, child = 0, n = 16 }
+  , { device = Digitakt2, parent = 1, child = 1, n = 16 }
+  , { device = Digitakt2, parent = 2, child = 1, n = 16 }
+  ]
 
 patternName : Pattern -> String
 patternName pattern = pattern.name
@@ -222,61 +269,64 @@ setPatternName s pattern = { pattern | name = s }
 --
 
 type alias Track =
-  { steps:        ByteArray
+  { version:      Version
+  , steps:        Array Int
   ,   skip1:        ByteArray
-  , soundPLocks:  ByteArray       -- may be empty for some versions
+  , soundPLocks:  Array Int       -- may be empty for some versions
   ,   skip2:        ByteArray
   }
 
-structTrack : Int -> SU.Part Track
-structTrack v =
-  SU.object Track
-    |> SU.field   .steps        "steps"       (SU.bytes 128)
-    |> (case CppStructs.trackStorage_soundSlotLocks v of
-          Nothing ->
-               SU.omitField .skip1 ByteArray.empty
-            >> SU.omitField .soundPLocks ByteArray.empty
+structTrack : StorageStruct Track
+structTrack =
+  ST.struct Track
+    |> ST.version .version      "version"     Version.external
+    |> ST.fieldV  .steps        "steps"       stepsPart
+    |> ST.skipToOrOmit
+                  .skip1  CppStructs.trackStorage_soundSlotLocks
+    |> ST.fieldV  .soundPLocks  "soundPLocks" soundPlocksPart
+    |> ST.skipTo .skip2 CppStructs.trackStorage_sizeof
+    |> ST.build "Track"
 
-          Just offset ->
-               SU.skipTo .skip1 (\_ -> Just offset)
-            >> SU.field .soundPLocks "soundPLocks" (SU.bytes 64)
-    )
-    |> SU.skipTo .skip2 (\_ -> CppStructs.trackStorage_sizeof v)
-    |> SU.build
+soundPlocksPart : Version -> Part (Array Int)
+soundPlocksPart v =
+  CppStructs.trackStorage_soundSlotLocks v
+  |> Maybe.andThen      (\_ -> numSteps v)
+  |> Maybe.map          (\n -> Part.array n Part.uint8)
+  |> Maybe.withDefault  (Part.ephemeral Array.empty)
 
 
-allSteps : List Int
-allSteps = List.range 0 63
+stepsPart : Version -> Part (Array Int)
+stepsPart v =
+  numSteps v
+  |> Maybe.map          (\n -> Part.array n Part.uint16be)
+  |> Maybe.withDefault  (Part.fail "unknown device")
+  -- we don't bother to store this as Part.array n Part.uint16be
+
 
 anyTrigsSet : Track -> Bool
 anyTrigsSet track =
   let
-    step i = (2 * i) + 1
-    trig i =
-      ByteArray.get (step i) track.steps
-        |> Maybe.unwrap False (\v -> Bitwise.and 0x0001 v == 1)
+    check i =
+      case (Array.get i track.steps) of
+        Just v ->
+          if Bitwise.and 0x0001 v == 1
+            then True
+            else check (i + 1)
+        Nothing ->
+          False
   in
-    List.any trig allSteps
+    check 0
 
 trackSoundPLocks : Track -> Array (Maybe Int)
 trackSoundPLocks track =
   let
-    getByte i = ByteArray.get i track.soundPLocks
     plock i = if i == 0xff then Nothing else Just i
   in
-    Array.initialize 64 (getByte >> Maybe.andThen plock)
+    Array.map plock track.soundPLocks
 
 setTrackSoundPlocks : Array (Maybe Int) -> Track -> Track
 setTrackSoundPlocks plocks track =
-  let
-    plockBytes =
-      ByteArray.section 0 (ByteArray.length track.soundPLocks)
-      <| ByteArray.fromArray
-      <| Array.map (Maybe.withDefault 0xff) plocks
-
-    soundPLocks = ByteArray.replace 0 plockBytes track.soundPLocks
-  in
-    { track | soundPLocks = soundPLocks}
+  { track | soundPLocks = Array.map (Maybe.withDefault 0xff) plocks}
 
 
 
@@ -286,47 +336,50 @@ setTrackSoundPlocks plocks track =
 --
 
 type alias PLock =
-  { paramId:  Int
+  { version:  Version
+  , paramId:  Int
   , track:    Int
-  , steps:    ByteArray
+  , steps:    Array Int
     -- 64x uint16be, but only high byte is used for some params, including
     -- sampleSlot which is the only plock we're interested in.  Hence it is
     -- easier to keep this as a ByteArray.
   }
 
-structPLock : SU.Part PLock
+structPLock : StorageStruct PLock
 structPLock =
-  SU.object PLock
-    |> SU.field   .paramId    "paramId"   SU.uint8
-    |> SU.field   .track      "track"     SU.uint8
-    |> SU.field   .steps      "steps"     (SU.bytes 128)
-    |> SU.build
+  ST.struct PLock
+    |> ST.version .version    "vesion"    Version.external
+    |> ST.field   .paramId    "paramId"   Part.uint8
+    |> ST.field   .track      "track"     Part.uint8
+    |> ST.fieldV  .steps      "steps"     stepsPart
+    |> ST.build "PLock"
 
 plockSamplePLocks : Maybe Sound -> PLock -> Maybe (Array (Maybe Int))
 plockSamplePLocks sound plock =
   let
-    getByte i = ByteArray.get (2 * i) plock.steps
-    step i = if i == 0xff then Nothing else Just i
+    step v =
+      if Bitwise.and 0xff00 v == 0xff00
+        then Nothing
+        else Just <| Bitwise.shiftRightBy 8 v
     isSamplePlock = sound
       |> Maybe.andThen (.version >> CppStructs.soundParameters_sampleParamId)
       |> Maybe.map (\n -> n == plock.paramId)
       |> Maybe.withDefault False
   in
     if isSamplePlock
-      then Just <| Array.initialize 64 (getByte >> Maybe.andThen step)
+      then Just <| Array.map step plock.steps
       else Nothing
 
 setPlockSamplePlocks : Maybe (Array (Maybe Int)) -> PLock -> PLock
 setPlockSamplePlocks mSteps plock =
   let
-    stepBytes =
-      ByteArray.fromList
-      << List.concat
-      << Array.toList
-      << Array.map (Maybe.unwrap [0xff, 0xff] (\b -> [b, 0x00]))
+    step mv =
+      case mv of
+          Nothing -> 0xff00
+          Just v -> Bitwise.shiftLeftBy 8 v
   in
     case mSteps of
-      Just steps -> { plock | steps = stepBytes steps }
+      Just steps -> { plock | steps = Array.map step steps }
       Nothing -> plock
 
 
@@ -337,7 +390,7 @@ setPlockSamplePlocks mSteps plock =
 --
 
 type alias Kit =
-  { version:      Int
+  { version:      Version
   , name:         String
   ,   skip1:         ByteArray
   , sounds:       Array Sound         -- 8 x
@@ -346,39 +399,54 @@ type alias Kit =
   ,   skip3:         ByteArray
   }
 
-structKit : SU.VersionedPart Int Kit
+structKit : StorageStruct Kit
 structKit =
-  SU.object Kit
-    |> SU.version .version      "version"     (version "kit" 0 9)
-    |> SU.field   .name         "name"        (SU.chars 16)
-    |> SU.skipTo  .skip1                      CppStructs.kitStorage_trackSounds
-    |> SU.variant .sounds       "sounds"
-        [ (0, SU.array 8 <| SU.fixedVersion structSound 0)
-        , (1, SU.array 8 <| SU.fixedVersion structSound 0)
-        , (2, SU.array 8 <| SU.fixedVersion structSound 0)
-        , (3, SU.array 8 <| SU.fixedVersion structSound 0)
-        , (4, SU.array 8 <| SU.fixedVersion structSound 0)
-        , (5, SU.array 8 <| SU.fixedVersion structSound 0)
-        , (6, SU.array 8 <| SU.fixedVersion structSound 1)
-        , (7, SU.array 8 <| SU.fixedVersion structSound 1)
-        , (8, SU.array 8 <| SU.fixedVersion structSound 2)
-        , (9, SU.array 8 <| SU.fixedVersion structSound 2)
-        ]
-    |> SU.skipTo  .skip2                    CppStructs.kitStorage_midiParams
-    |> SU.variant .midiSetup    "midiSetup"
-        [ (0, SU.array 8 <| SU.fixedVersion structMidiSetup 0)
-        , (1, SU.array 8 <| SU.fixedVersion structMidiSetup 0)
-        , (2, SU.array 8 <| SU.fixedVersion structMidiSetup 0)
-        , (3, SU.array 8 <| SU.fixedVersion structMidiSetup 0)
-        , (4, SU.array 8 <| SU.fixedVersion structMidiSetup 0)
-        , (5, SU.array 8 <| SU.fixedVersion structMidiSetup 0)
-        , (6, SU.array 8 <| SU.fixedVersion structMidiSetup 1)
-        , (7, SU.array 8 <| SU.fixedVersion structMidiSetup 1)
-        , (8, SU.array 8 <| SU.fixedVersion structMidiSetup 1)
-        , (9, SU.array 8 <| SU.fixedVersion structMidiSetup 1)
-        ]
-    |> SU.skipTo  .skip3                    CppStructs.kitStorage_sizeof
-    |> SU.buildVersioned
+  ST.struct Kit
+    |> ST.version .version      "version"     Version.uint32be
+    |> ST.field   .name         "name"        (Part.chars 16)
+    |> ST.skipTo  .skip1                      CppStructs.kitStorage_trackSounds
+    |> ST.fieldV  .sounds       "sounds"      (subStructArray kitVersionToSounds structSound)
+    |> ST.skipTo  .skip2                      CppStructs.kitStorage_midiParams
+    |> ST.fieldV  .midiSetup    "midiSetup"   (subStructArray kitVersionToMidiSetups structMidiSetup)
+    |> ST.skipTo  .skip3                      CppStructs.kitStorage_sizeof
+    |> ST.build "Kit"
+
+kitVersionToSounds : List SubStructArrayMap
+kitVersionToSounds =
+  [ { device = Digitakt, parent = 0, child = 0, n = 8 }
+  , { device = Digitakt, parent = 1, child = 0, n = 8 }
+  , { device = Digitakt, parent = 2, child = 0, n = 8 }
+  , { device = Digitakt, parent = 3, child = 0, n = 8 }
+  , { device = Digitakt, parent = 4, child = 0, n = 8 }
+  , { device = Digitakt, parent = 5, child = 0, n = 8 }
+  , { device = Digitakt, parent = 6, child = 1, n = 8 }
+  , { device = Digitakt, parent = 7, child = 1, n = 8 }
+  , { device = Digitakt, parent = 8, child = 2, n = 8 }
+  , { device = Digitakt, parent = 9, child = 2, n = 8 }
+
+  , { device = Digitakt2, parent = 0, child = 0, n = 16 }
+  , { device = Digitakt2, parent = 1, child = 1, n = 16 }
+  , { device = Digitakt2, parent = 2, child = 1, n = 16 }
+  ]
+
+kitVersionToMidiSetups : List SubStructArrayMap
+kitVersionToMidiSetups =
+  [ { device = Digitakt, parent = 0, child = 0, n = 8 }
+  , { device = Digitakt, parent = 1, child = 0, n = 8 }
+  , { device = Digitakt, parent = 2, child = 0, n = 8 }
+  , { device = Digitakt, parent = 3, child = 0, n = 8 }
+  , { device = Digitakt, parent = 4, child = 0, n = 8 }
+  , { device = Digitakt, parent = 5, child = 0, n = 8 }
+  , { device = Digitakt, parent = 6, child = 1, n = 8 }
+  , { device = Digitakt, parent = 7, child = 1, n = 8 }
+  , { device = Digitakt, parent = 8, child = 1, n = 8 }
+  , { device = Digitakt, parent = 9, child = 1, n = 8 }
+
+  , { device = Digitakt2, parent = 0, child = 0, n = 16 }
+  , { device = Digitakt2, parent = 1, child = 1, n = 16 }
+  , { device = Digitakt2, parent = 2, child = 1, n = 16 }
+  ]
+
 
 setKitName : String -> Kit -> Kit
 setKitName s kit = { kit | name = s }
@@ -422,7 +490,7 @@ isDefaultKit kit =
 
 type alias Sound =
   { magicHead:    Int
-  , version:      Int
+  , version:      Version
   , tagMask:      Int
   , name:         String
   ,   skip1:        ByteArray
@@ -432,19 +500,19 @@ type alias Sound =
   ,   skip3:        ByteArray
   }
 
-structSound : SU.VersionedPart Int Sound
+structSound : StorageStruct Sound
 structSound =
-  SU.object Sound
-    |> SU.field   .magicHead    "magicHead"   (magic magicHead)
-    |> SU.version .version      "version"     (version "sound" 0 2)
-    |> SU.field   .tagMask      "tagMask"     SU.uint32be
-    |> SU.field   .name         "name"        (SU.chars 16)
-    |> SU.skipTo  .skip1                      CppStructs.soundStorage_sampleSlot
-    |> SU.field   .sampleSlot   "sampleSlot"  SU.uint8
-    |> SU.skipTo  .skip2                      CppStructs.soundStorage_sampleFile
-    |> SU.field   .sample       "sample"      structSample
-    |> SU.skipTo  .skip3                      CppStructs.soundStorage_sizeof
-    |> SU.buildVersioned
+  ST.struct Sound
+    |> ST.field   .magicHead    "magicHead"   Part.magicHead
+    |> ST.version .version      "version"     Version.uint32be
+    |> ST.field   .tagMask      "tagMask"     Part.uint32be
+    |> ST.field   .name         "name"        (Part.chars 16)
+    |> ST.skipTo  .skip1                      CppStructs.soundStorage_sampleSlot
+    |> ST.field   .sampleSlot   "sampleSlot"  Part.uint8
+    |> ST.skipTo  .skip2                      CppStructs.soundStorage_sampleFile
+    |> ST.field   .sample       "sample"      structSample
+    |> ST.skipTo  .skip3                      CppStructs.soundStorage_sizeof
+    |> ST.build "Sound"
 
 sameSound : Sound -> Sound -> Bool
 sameSound a b =
@@ -484,20 +552,20 @@ setSoundSampleSlot i sound = { sound | sampleSlot = i }
 -- once there is more than just V0, this will need to be represented.
 
 type alias MidiSetup =
-  { version:      Int
+  { version:      Version
   ,   skip1:        ByteArray
   , enableMask:   Int
   ,   skip2:        ByteArray
   }
 
-structMidiSetup : SU.VersionedPart Int MidiSetup
+structMidiSetup : StorageStruct MidiSetup
 structMidiSetup =
-  SU.object MidiSetup
-    |> SU.version .version      "version"     (version "midi setup" 0 1)
-    |> SU.skipTo  .skip1                      CppStructs.midiSetupStorage_enableMask
-    |> SU.field   .enableMask   "enableMask"  SU.uint16be
-    |> SU.skipTo  .skip2                      CppStructs.midiSetupStorage_sizeof
-    |> SU.buildVersioned
+  ST.struct MidiSetup
+    |> ST.version .version      "version"     Version.uint32be
+    |> ST.skipTo  .skip1                      CppStructs.midiSetupStorage_enableMask
+    |> ST.field   .enableMask   "enableMask"  Part.uint16be
+    |> ST.skipTo  .skip2                      CppStructs.midiSetupStorage_sizeof
+    |> ST.build "MidiSetup"
 
 
 midiTrackEnabled : MidiSetup -> Bool
@@ -511,20 +579,27 @@ midiTrackEnabled m = Bitwise.and 0x0001 m.enableMask /= 0
 --
 
 type alias ProjectSettings =
-  { version:      Int
+  { version:      Version
   ,   skip1:        ByteArray
   , samples:      Array Sample    -- 128x
   ,   skip2:        ByteArray
   }
 
-structProjectSettings : SU.VersionedPart Int ProjectSettings
+structProjectSettings : StorageStruct ProjectSettings
 structProjectSettings =
-  SU.object ProjectSettings
-    |> SU.version .version      "version"     (version "settings" 0 7)
-    |> SU.skipTo  .skip1                      CppStructs.projectSettingsStorage_sampleList
-    |> SU.field   .samples      "samples"     (SU.array 128 structSample)
-    |> SU.skipTo  .skip2                      CppStructs.projectSettingsStorage_sizeof
-    |> SU.buildVersioned
+  ST.struct ProjectSettings
+    |> ST.version .version      "version"     Version.uint32be
+    |> ST.skipTo  .skip1                      CppStructs.projectSettingsStorage_sampleList
+    |> ST.fieldV   .samples      "samples"    sampleBankPart
+    |> ST.skipTo  .skip2                      CppStructs.projectSettingsStorage_sizeof
+    |> ST.build "ProjectSettings"
+
+sampleBankPart : Version -> Part (Array Sample)
+sampleBankPart v =
+  case v.device of
+    Digitakt  -> Part.array  128 structSample
+    Digitakt2 -> Part.array 1024 structSample
+    _         -> Part.fail "unknown device"
 
 
 --
@@ -542,14 +617,14 @@ type alias Sample =
   , seqnr : Int
   }
 
-structSample : SU.Part Sample
+structSample : Part Sample
 structSample =
-  SU.object Sample
-    |> SU.field     .inode    "inode"     SU.uint32be
-    |> SU.field     .hash     "hash"      SU.uint32be
-    |> SU.field     .filesize "filesize"  SU.uint32be
-    |> SU.field     .seqnr    "seqnr"     SU.uint32be
-    |> SU.build
+  ST.struct Sample
+    |> ST.field     .inode    "inode"     Part.uint32be
+    |> ST.field     .hash     "hash"      Part.uint32be
+    |> ST.field     .filesize "filesize"  Part.uint32be
+    |> ST.field     .seqnr    "seqnr"     Part.uint32be
+    |> ST.buildAsPart "Sample"
 
 inodeInvalid : Int
 inodeInvalid = 0xffffffff

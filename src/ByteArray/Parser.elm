@@ -20,6 +20,8 @@ module ByteArray.Parser exposing
   , map5
   , map6
 
+  , mapError
+
   , Mark
   , mark
   , jump
@@ -48,6 +50,7 @@ module ByteArray.Parser exposing
 
 import ByteArray exposing (ByteArray)
 import ByteArray.String
+import Html exposing (a)
 
 type alias State = { data : ByteArray, pos : Int }
 type alias Err = String
@@ -147,6 +150,9 @@ map6 : (a -> b -> c -> d -> e -> f -> r)
   -> Parser r
 map6 f pa pb pc pd pe pf = pa |> andThen (\a -> map5 (f a) pb pc pd pe pf)
 
+
+mapError : (Err -> Err) -> Parser a -> Parser a
+mapError errFn (P pafn) = P (pafn >> Result.mapError errFn)
 
 {-| An opaque marker for a point in a parse.
 

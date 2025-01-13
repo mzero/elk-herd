@@ -43,6 +43,7 @@ import Elektron.Digitakt.Related as Rel
 import Elektron.Digitakt.Types as T exposing (BankItem, Pattern, Sample, Sound)
 import Elektron.Drive as Drive exposing (Drive)
 import Elektron.Instrument as EI
+import Elektron.Struct.Version exposing (Version)
 import Missing.Maybe as Maybe
 import SysEx.Dump
 import SysEx.SysEx exposing (SysEx)
@@ -57,9 +58,9 @@ something if the user deletes a pattern, or moves it, leaving a hole. While
 pattern and sample slot filled, even if they are logically empty.
 -}
 type alias Project =
-  { patterns        : BankOf Pattern    -- 128 x
-  , samplePool      : BankOf Sample     -- 128 x, mirrors binary.samples
-  , soundPool       : BankOf Sound      -- 128 x
+  { patterns        : BankOf Pattern
+  , samplePool      : BankOf Sample
+  , soundPool       : BankOf Sound
 
   , crossReference  : Rel.CrossReference
 
@@ -75,8 +76,8 @@ emptyProject vers =
   , samplePool = Bank.initializeEmpty 128
   , soundPool = Bank.initializeEmpty 128
   , crossReference = Rel.nullCrossReference
-  , binary = Blank.blankProjectSettings vers.projectSettingsVersion
-  , blankPattern = Blank.blankPatternKit vers.patternAndKitVersion
+  , binary = Blank.blankProjectSettings (Version EI.Digitakt vers.projectSettingsVersion)
+  , blankPattern = Blank.blankPatternKit (Version EI.Digitakt vers.patternAndKitVersion)
   }
 
 projectEmptySound : Project -> Maybe Dump.Sound
@@ -90,7 +91,7 @@ projectVersions proj =
     patternPartVersions f =
       Bank.toArray proj.patterns
       |> Array.toList
-      |> List.filterMap (Maybe.map (.binary >> f >> .version))
+      |> List.filterMap (Maybe.map (.binary >> f >> .version >> .int))
       |> List.maximum
 
     patternVersion =
@@ -98,7 +99,7 @@ projectVersions proj =
         (patternPartVersions .pattern)
         (patternPartVersions .kit)
 
-    projectVersion = Maybe.map .version proj.binary
+    projectVersion = Maybe.map (.version >> .int) proj.binary
   in
     Maybe.map2 EI.DigitakStorageVersions projectVersion patternVersion
 
@@ -124,7 +125,7 @@ dump request in this order:
 
   * 128 PatternKit dumps
   * 0 to 128 Sound dumps (the sound pool, only non-empty entries)
-  * PatternSettings
+  * ProjectSettings
 
 This code (as well as others in the application), use the PatternSettings
 as the indication that all has been received.

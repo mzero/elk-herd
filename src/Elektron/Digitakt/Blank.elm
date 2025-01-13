@@ -34,7 +34,8 @@ of the empty patternKit.
 import ByteArray exposing (ByteArray)
 import Elektron.Digitakt.BlankData as BlankData
 import Elektron.Digitakt.Dump as Dump
-import Elektron.StructUtil as SU
+import Elektron.Instrument exposing (Device(..))
+import Elektron.Struct.Version exposing (Version, VersionSpec(..))
 import ByteArray.Compression
 import ByteArray.Parser as Parser
 
@@ -45,44 +46,57 @@ prepDataCompressed =
     (ByteArray.fromList >> ByteArray.Compression.decompress)
 
 
-buildBlank : SU.VersionedPart v a -> v -> Maybe ByteArray -> Maybe a
+buildBlank : Dump.StorageStruct a -> Version -> Maybe ByteArray -> Maybe a
 buildBlank struct v =
-  Maybe.andThen (Parser.parse (struct.decoderVersion v) >> Result.toMaybe)
+  let
+    w = MatchVersion v
+  in
+  Maybe.andThen (Parser.parse (struct.decoder w) >> Result.toMaybe)
 
 
-blankPatternKitData : Int -> Maybe ByteArray
-blankPatternKitData v = prepDataCompressed <|
-  case v of
-      0 -> BlankData.blankPatternKit_v0_compressed
-      1 -> BlankData.blankPatternKit_v1_compressed
-      2 -> BlankData.blankPatternKit_v2_compressed
-      3 -> BlankData.blankPatternKit_v3_compressed
-      4 -> BlankData.blankPatternKit_v4_compressed
-      5 -> BlankData.blankPatternKit_v5_compressed
-      6 -> BlankData.blankPatternKit_v6_compressed
-      7 -> BlankData.blankPatternKit_v7_compressed
-      8 -> BlankData.blankPatternKit_v8_compressed
-      9 -> BlankData.blankPatternKit_v9_compressed
-      _ -> Nothing
+blankPatternKitData : Version -> Maybe ByteArray
+blankPatternKitData v =
+  prepDataCompressed
+  <| if v.device == Digitakt
+    then
+      case v.int of
+          0 -> BlankData.blankPatternKit_v0_compressed
+          1 -> BlankData.blankPatternKit_v1_compressed
+          2 -> BlankData.blankPatternKit_v2_compressed
+          3 -> BlankData.blankPatternKit_v3_compressed
+          4 -> BlankData.blankPatternKit_v4_compressed
+          5 -> BlankData.blankPatternKit_v5_compressed
+          6 -> BlankData.blankPatternKit_v6_compressed
+          7 -> BlankData.blankPatternKit_v7_compressed
+          8 -> BlankData.blankPatternKit_v8_compressed
+          9 -> BlankData.blankPatternKit_v9_compressed
+          _ -> Nothing
+    else
+      Nothing
 
-blankPatternKit : Int -> Maybe Dump.PatternKit
+blankPatternKit : Version -> Maybe Dump.PatternKit
 blankPatternKit v =
   buildBlank Dump.structPatternKit v (blankPatternKitData v)
 
 
-blankProjectSettingsData : Int -> Maybe ByteArray
-blankProjectSettingsData v = prepDataCompressed <|
-  case v of
-      0 -> BlankData.blankProjectSettings_v0_compressed
-      1 -> BlankData.blankProjectSettings_v1_compressed
-      2 -> BlankData.blankProjectSettings_v2_compressed
-      3 -> BlankData.blankProjectSettings_v3_compressed
-      4 -> BlankData.blankProjectSettings_v4_compressed
-      5 -> BlankData.blankProjectSettings_v5_compressed
-      6 -> BlankData.blankProjectSettings_v6_compressed
-      7 -> BlankData.blankProjectSettings_v7_compressed
-      _ -> Nothing
+blankProjectSettingsData : Version -> Maybe ByteArray
+blankProjectSettingsData v =
+  prepDataCompressed
+  <| if v.device == Digitakt
+    then
+      case v.int of
+          0 -> BlankData.blankProjectSettings_v0_compressed
+          1 -> BlankData.blankProjectSettings_v1_compressed
+          2 -> BlankData.blankProjectSettings_v2_compressed
+          3 -> BlankData.blankProjectSettings_v3_compressed
+          4 -> BlankData.blankProjectSettings_v4_compressed
+          5 -> BlankData.blankProjectSettings_v5_compressed
+          6 -> BlankData.blankProjectSettings_v6_compressed
+          7 -> BlankData.blankProjectSettings_v7_compressed
+          _ -> Nothing
+    else
+      Nothing
 
-blankProjectSettings : Int -> Maybe Dump.ProjectSettings
+blankProjectSettings : Version -> Maybe Dump.ProjectSettings
 blankProjectSettings v =
   buildBlank Dump.structProjectSettings v (blankProjectSettingsData v)

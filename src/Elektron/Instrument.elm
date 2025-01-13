@@ -1,5 +1,8 @@
 module Elektron.Instrument exposing
-  ( Instrument
+  ( Device(..)
+
+  , Instrument
+  , fromDeviceResponse
 
   , report
 
@@ -8,6 +11,13 @@ module Elektron.Instrument exposing
   , DigitakStorageVersions
   , digitaktStorageVersions
   )
+
+
+type Device
+  = Digitakt
+  | Digitakt2
+  | Unknown
+
 
 {-| Information about an Elektron instrument that it provides in response to
 DeviceRequest and VersionRequest API messages. See `SysEx.Connect` module for
@@ -22,11 +32,25 @@ Notes:
 -}
 type alias Instrument =
   { productId : Int
+  , device : Device
   , deviceName : String
   , supportedMessages : List Int
   , build : String
   , version : String
   }
+
+
+fromDeviceResponse : Int -> List Int -> String -> Instrument
+fromDeviceResponse productId msgs deviceName =
+  let
+    device =
+      case productId of
+        12 -> Digitakt
+        43 -> Digitakt2
+        _  -> Unknown
+  in
+    Instrument productId device deviceName msgs "????" "?.??"
+
 
 {-| This string is used when reporting the device to the stats server.
 -}
@@ -51,8 +75,6 @@ hasDriveSamples inst =
     , 0x21  -- itemRename
     ]
 
-digitaktProductId : Int
-digitaktProductId = 12
 
 type alias DigitakStorageVersions =
   { projectSettingsVersion : Int
@@ -116,6 +138,6 @@ digitaktStorageVersions inst =
             then vers
             else go rest (Just v)
   in
-    if inst.productId == digitaktProductId
+    if inst.device == Digitakt
       then go digitaktVersions Nothing
       else Nothing

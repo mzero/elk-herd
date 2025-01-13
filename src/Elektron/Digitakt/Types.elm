@@ -122,7 +122,7 @@ type alias Sound =
 correct `Bank` by using `Index a`.
 -}
 type alias PLock a = Maybe (Index a)
-type alias PLocks a = Array (PLock a)     -- 64x
+type alias PLocks a = Array (PLock a)
 
 type alias SamplePLocks = PLocks Sample
 type alias SoundPLocks = PLocks Sound
