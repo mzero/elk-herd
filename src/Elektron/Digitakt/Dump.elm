@@ -218,9 +218,9 @@ structPattern =
                                                 <| patternToPlockVersion v
                                               )
     |> ST.field   .name         "name"        (Part.chars 16)
-    |> ST.skipTo  .skip1                      (.int >> CppStructs.patternStorage_kitIndex)
+    |> ST.skipTo  .skip1                      CppStructs.patternStorage_kitIndex
     |> ST.field   .kitIndex     "kitIndex"    Part.uint8
-    |> ST.skipTo  .skip2                      (.int >> CppStructs.patternStorage_sizeof)
+    |> ST.skipTo  .skip2                      CppStructs.patternStorage_sizeof
     |> ST.build "Pattern"
 
 patternToPlockVersion : Version -> VersionSpec
@@ -270,14 +270,14 @@ structTrack =
     |> ST.version .version      "version"     Version.external
     |> ST.field   .steps        "steps"       (Part.bytes 128)
     |> ST.skipToOrOmit
-                  .skip1  (.int >> CppStructs.trackStorage_soundSlotLocks)
+                  .skip1  CppStructs.trackStorage_soundSlotLocks
     |> ST.fieldV  .soundPLocks  "soundPLocks"
                                               (\v ->
-                                                if Maybe.isJust (CppStructs.trackStorage_soundSlotLocks v.int)
+                                                if Maybe.isJust (CppStructs.trackStorage_soundSlotLocks v)
                                                   then (Part.bytes 64)
                                                   else (Part.ephemeral ByteArray.empty)
                                               )
-    |> ST.skipTo .skip2 (.int >> CppStructs.trackStorage_sizeof)
+    |> ST.skipTo .skip2 CppStructs.trackStorage_sizeof
     |> ST.build "Track"
 
 
@@ -346,7 +346,7 @@ plockSamplePLocks sound plock =
     getByte i = ByteArray.get (2 * i) plock.steps
     step i = if i == 0xff then Nothing else Just i
     isSamplePlock = sound
-      |> Maybe.andThen (.version >> .int >> CppStructs.soundParameters_sampleParamId)
+      |> Maybe.andThen (.version >> CppStructs.soundParameters_sampleParamId)
       |> Maybe.map (\n -> n == plock.paramId)
       |> Maybe.withDefault False
   in
@@ -389,11 +389,11 @@ structKit =
   ST.struct Kit
     |> ST.version .version      "version"     Version.uint32be
     |> ST.field   .name         "name"        (Part.chars 16)
-    |> ST.skipTo  .skip1                      (.int >> CppStructs.kitStorage_trackSounds)
+    |> ST.skipTo  .skip1                      CppStructs.kitStorage_trackSounds
     |> ST.fieldV  .sounds       "sounds"      (subStructArray kitVersionToSounds structSound)
-    |> ST.skipTo  .skip2                      (.int >> CppStructs.kitStorage_midiParams)
+    |> ST.skipTo  .skip2                      CppStructs.kitStorage_midiParams
     |> ST.fieldV  .midiSetup    "midiSetup"   (subStructArray kitVersionToMidiSetups structMidiSetup)
-    |> ST.skipTo  .skip3                      (.int >> CppStructs.kitStorage_sizeof)
+    |> ST.skipTo  .skip3                      CppStructs.kitStorage_sizeof
     |> ST.build "Kit"
 
 kitVersionToSounds : List SubStructArrayMap
@@ -484,11 +484,11 @@ structSound =
     |> ST.version .version      "version"     Version.uint32be
     |> ST.field   .tagMask      "tagMask"     Part.uint32be
     |> ST.field   .name         "name"        (Part.chars 16)
-    |> ST.skipTo  .skip1                      (.int >> CppStructs.soundStorage_sampleSlot)
+    |> ST.skipTo  .skip1                      CppStructs.soundStorage_sampleSlot
     |> ST.field   .sampleSlot   "sampleSlot"  Part.uint8
-    |> ST.skipTo  .skip2                      (.int >> CppStructs.soundStorage_sampleFile)
+    |> ST.skipTo  .skip2                      CppStructs.soundStorage_sampleFile
     |> ST.field   .sample       "sample"      structSample
-    |> ST.skipTo  .skip3                      (.int >> CppStructs.soundStorage_sizeof)
+    |> ST.skipTo  .skip3                      CppStructs.soundStorage_sizeof
     |> ST.build "Sound"
 
 sameSound : Sound -> Sound -> Bool
@@ -539,9 +539,9 @@ structMidiSetup : StorageStruct MidiSetup
 structMidiSetup =
   ST.struct MidiSetup
     |> ST.version .version      "version"     Version.uint32be
-    |> ST.skipTo  .skip1                      (.int >> CppStructs.midiSetupStorage_enableMask)
+    |> ST.skipTo  .skip1                      CppStructs.midiSetupStorage_enableMask
     |> ST.field   .enableMask   "enableMask"  Part.uint16be
-    |> ST.skipTo  .skip2                      (.int >> CppStructs.midiSetupStorage_sizeof)
+    |> ST.skipTo  .skip2                      CppStructs.midiSetupStorage_sizeof
     |> ST.build "MidiSetup"
 
 
@@ -566,9 +566,9 @@ structProjectSettings : StorageStruct ProjectSettings
 structProjectSettings =
   ST.struct ProjectSettings
     |> ST.version .version      "version"     Version.uint32be
-    |> ST.skipTo  .skip1                      (.int >> CppStructs.projectSettingsStorage_sampleList)
+    |> ST.skipTo  .skip1                      CppStructs.projectSettingsStorage_sampleList
     |> ST.field   .samples      "samples"     (Part.array 128 structSample)
-    |> ST.skipTo  .skip2                      (.int >> CppStructs.projectSettingsStorage_sizeof)
+    |> ST.skipTo  .skip2                      CppStructs.projectSettingsStorage_sizeof
     |> ST.build "ProjectSettings"
 
 

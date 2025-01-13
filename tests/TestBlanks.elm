@@ -22,25 +22,26 @@ tests = T.describe "Elektron.Digitakt.Blank"
 testPatternKit : T.Test
 testPatternKit = T.describe "patternKit" (
   List.range 0 9
-  |> List.map (\v ->
+  |> List.map (\i ->
     let
-      md = Blank.blankPatternKitData <| Version Digitakt v
+      v = Version Digitakt i
+      md = Blank.blankPatternKitData v
       ms = Maybe.map ByteArray.length md
-      pk = Blank.blankPatternKit <| Version Digitakt v
+      pk = Blank.blankPatternKit v
       exepectedSize =
         Maybe.map2 (+)
           (CppStructs.patternStorage_sizeof v)
           (CppStructs.kitStorage_sizeof v)
     in
-    T.describe ("version " ++ String.fromInt v)
+    T.describe ("version " ++ String.fromInt i)
     [ T.test "length" <|
       \_ -> ms |> Expect.equal exepectedSize
     , T.test "parses" <|
       \_ -> pk |> Expect.notEqual Nothing
     , T.test "pattern version match" <|
-      \_ -> pk |> Maybe.map (.pattern >> .version >> .int)  |> Expect.equal (Just v)
+      \_ -> pk |> Maybe.map (.pattern >> .version >> .int)  |> Expect.equal (Just i)
     , T.test "kit version match" <|
-      \_ -> pk |> Maybe.map (.kit >> .version >> .int)      |> Expect.equal (Just v)
+      \_ -> pk |> Maybe.map (.kit >> .version >> .int)      |> Expect.equal (Just i)
     , T.test "round-trips" <|
       \_ -> Maybe.map (Dump.structPatternKit.encoder >> Builder.build >> ByteArray.toArray) pk
             |> Expect.equal (Maybe.map ByteArray.toArray md)
@@ -51,19 +52,20 @@ testPatternKit = T.describe "patternKit" (
 testProjectSettings : T.Test
 testProjectSettings = T.describe "projectSettings" (
   List.range 0 7
-  |> List.map (\v ->
+  |> List.map (\i ->
     let
-      md = Blank.blankProjectSettingsData <| Version Digitakt v
+      v = Version Digitakt i
+      md = Blank.blankProjectSettingsData v
       ms = Maybe.map ByteArray.length md
-      ps = Blank.blankProjectSettings <| Version Digitakt v
+      ps = Blank.blankProjectSettings v
     in
-    T.describe ("version " ++ String.fromInt v)
+    T.describe ("version " ++ String.fromInt i)
     [ T.test "length" <|
       \_ -> ms |> Expect.equal (CppStructs.projectSettingsStorage_sizeof v)
     , T.test "parses" <|
       \_ -> ps |> Expect.notEqual Nothing
     , T.test "version match" <|
-      \_ -> ps |> Maybe.map (.version >> .int) |> Expect.equal (Just v)
+      \_ -> ps |> Maybe.map (.version >> .int) |> Expect.equal (Just i)
     , T.test "round-trips" <|
       \_ -> Maybe.map (Dump.structProjectSettings.encoder >> Builder.build >> ByteArray.toArray) ps
             |> Expect.equal (Maybe.map ByteArray.toArray md)
