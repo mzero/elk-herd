@@ -171,7 +171,7 @@ structPatternKit =
   ST.struct PatternKit
     |> ST.version   .pattern    "pattern"   structPattern
     |> ST.fieldV    .kit        "kit"       (MatchVersion >> ST.forVersionSpec structKit)
-    |> ST.build
+    |> ST.build "PatternKit"
 
 
 
@@ -221,7 +221,7 @@ structPattern =
     |> ST.skipTo  .skip1                      (.int >> CppStructs.patternStorage_kitIndex)
     |> ST.field   .kitIndex     "kitIndex"    Part.uint8
     |> ST.skipTo  .skip2                      (.int >> CppStructs.patternStorage_sizeof)
-    |> ST.build
+    |> ST.build "Pattern"
 
 patternToPlockVersion : Version -> VersionSpec
 patternToPlockVersion v = MatchVersion (Version v.device 0)
@@ -278,7 +278,7 @@ structTrack =
                                                   else (Part.ephemeral ByteArray.empty)
                                               )
     |> ST.skipTo .skip2 (.int >> CppStructs.trackStorage_sizeof)
-    |> ST.build
+    |> ST.build "Track"
 
 
 allSteps : List Int
@@ -338,7 +338,7 @@ structPLock =
     |> ST.field   .paramId    "paramId"   Part.uint8
     |> ST.field   .track      "track"     Part.uint8
     |> ST.field   .steps      "steps"     (Part.bytes 128)
-    |> ST.build
+    |> ST.build "PLock"
 
 plockSamplePLocks : Maybe Sound -> PLock -> Maybe (Array (Maybe Int))
 plockSamplePLocks sound plock =
@@ -394,7 +394,7 @@ structKit =
     |> ST.skipTo  .skip2                      (.int >> CppStructs.kitStorage_midiParams)
     |> ST.fieldV  .midiSetup    "midiSetup"   (subStructArray kitVersionToMidiSetups structMidiSetup)
     |> ST.skipTo  .skip3                      (.int >> CppStructs.kitStorage_sizeof)
-    |> ST.build
+    |> ST.build "Kit"
 
 kitVersionToSounds : List SubStructArrayMap
 kitVersionToSounds =
@@ -489,7 +489,7 @@ structSound =
     |> ST.skipTo  .skip2                      (.int >> CppStructs.soundStorage_sampleFile)
     |> ST.field   .sample       "sample"      structSample
     |> ST.skipTo  .skip3                      (.int >> CppStructs.soundStorage_sizeof)
-    |> ST.build
+    |> ST.build "Sound"
 
 sameSound : Sound -> Sound -> Bool
 sameSound a b =
@@ -542,7 +542,7 @@ structMidiSetup =
     |> ST.skipTo  .skip1                      (.int >> CppStructs.midiSetupStorage_enableMask)
     |> ST.field   .enableMask   "enableMask"  Part.uint16be
     |> ST.skipTo  .skip2                      (.int >> CppStructs.midiSetupStorage_sizeof)
-    |> ST.build
+    |> ST.build "MidiSetup"
 
 
 midiTrackEnabled : MidiSetup -> Bool
@@ -569,7 +569,7 @@ structProjectSettings =
     |> ST.skipTo  .skip1                      (.int >> CppStructs.projectSettingsStorage_sampleList)
     |> ST.field   .samples      "samples"     (Part.array 128 structSample)
     |> ST.skipTo  .skip2                      (.int >> CppStructs.projectSettingsStorage_sizeof)
-    |> ST.build
+    |> ST.build "ProjectSettings"
 
 
 --
@@ -594,7 +594,7 @@ structSample =
     |> ST.field     .hash     "hash"      Part.uint32be
     |> ST.field     .filesize "filesize"  Part.uint32be
     |> ST.field     .seqnr    "seqnr"     Part.uint32be
-    |> ST.buildAsPart
+    |> ST.buildAsPart "Sample"
 
 inodeInvalid : Int
 inodeInvalid = 0xffffffff

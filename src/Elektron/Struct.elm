@@ -201,6 +201,7 @@ field fext flabel pb (SB sb) =
         >> Parser.andThen (\(fbc, x, m) ->
           pb.decoder
           |> Parser.map (\b -> (fbc b, x, m))
+          |> Parser.mapError (\s -> flabel ++ ": " ++ s)
         )
     , views = sb.views ++ [fext >> pb.view flabel]
     , version = sb.version
@@ -222,6 +223,7 @@ fieldV fext flabel fpb (SB sb) =
         >> Parser.andThen (\(fbc, x, m) ->
           (fpb x).decoder
           |> Parser.map (\b -> (fbc b, x, m))
+          |> Parser.mapError (\s -> flabel ++ ": " ++ s)
         )
     , views = sb.views ++ [\a -> fext a |> (fpb (sb.version a)).view flabel]
     , version = sb.version
@@ -330,7 +332,9 @@ version fext flabel sv (SB sb) =
   , decoder = (\w ->
       sb.decoder w
       |> Parser.andThen (\(fbc, x, m) ->
-        sv.decoder w |> Parser.map (\b -> (fbc b, sv.version b, m))
+        sv.decoder w
+        |> Parser.map (\b -> (fbc b, sv.version b, m))
+        |> Parser.mapError (\s -> flabel ++ ": " ++ s)
     )
   )
   , views = sb.views ++ [fext >> sv.view flabel]
@@ -351,10 +355,13 @@ Notice the type signature for the argument:
 These two things ensure that you can't leave a field out, and you can't
 forget the version if the structure should have one.
 -}
-build : StructBuilder a a w v v -> Struct w v a
-build (SB sb) =
+build : String -> StructBuilder a a w v v -> Struct w v a
+build name (SB sb) =
   { encoder = \o -> Builder.list (\e -> e o) sb.encoders
-  , decoder = sb.decoder >> Parser.map (\(r, _, _) -> r)
+  , decoder =
+      sb.decoder
+      >> Parser.map (\(r, _, _) -> r)
+      >> Parser.mapError (\s -> name ++ "." ++ s)
   , view = \label v ->
     [ Html.div [ Attr.class "field field-fullwidth" ]
       ([ Html.span [ Attr.class "label" ] [ Html.text label ]
@@ -369,6 +376,6 @@ build (SB sb) =
 {-| For a non-versioned struct, this `build` ensures it is completely built,
 has no version, and is then available as a `Part`.
 -}
-buildAsPart : StructBuilder a a () () () -> Part a
-buildAsPart sb = forVersionSpec (build sb) ()
+buildAsPart : String -> StructBuilder a a () () () -> Part a
+buildAsPart name sb = forVersionSpec (build name sb) ()
 
