@@ -1,6 +1,6 @@
 module Elektron.Struct.Part exposing
   ( Decoder, Encoder
-  
+
   , Part
 
   , uint8, uint16be, uint32be
@@ -11,8 +11,7 @@ module Elektron.Struct.Part exposing
   , map
 
   , const
-  
-  , version
+
   , magicHead, magicTail
   , fail
   )
@@ -167,27 +166,6 @@ array n pa =
     , decoder = Parser.map Array.fromList pl.decoder
     , view = \label v -> pl.view label <| Array.toList v
    }
-
-
-{-| Just like uint32be, but it checks that it is in the supported range.
--}
-version : String -> Int -> Int -> Part Int
-version t lo hi =
-  let
-    pbase = uint32be
-    errorMsg v =
-      t ++ " version " ++ String.fromInt v
-      ++ " out of supported range "
-      ++ String.fromInt lo ++ " ~ " ++ String.fromInt hi
-  in
-    { pbase
-    | decoder =
-        pbase.decoder |> Parser.andThen (\v ->
-          if lo <= v && v <= hi
-            then Parser.succeed v
-            else Parser.fail (errorMsg v)
-          )
-    }
 
 
 {-| A field that always has a constant, magic value.
