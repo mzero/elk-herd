@@ -71,6 +71,7 @@ import Elektron.Struct as ST
 import Elektron.Struct.Part as Part exposing (Part)
 import Elektron.Struct.Version as Version exposing (Version, VersionSpec(..))
 import Missing.Maybe as Maybe
+import Html exposing (main_)
 
 
 {- Structure names follow Elektron's header files names for these structures.
@@ -154,6 +155,13 @@ subStructArray mapping struct =
   subStruct mapping
     (\args childSpec -> Part.array args.n <| ST.forVersionSpec struct childSpec)
 
+
+numSteps : Version -> Maybe Int
+numSteps v =
+  case v.device of
+      Digitakt  -> Just  64
+      Digitakt2 -> Just 128
+      _         -> Nothing
 
 --
 -- PATTERN
@@ -239,6 +247,10 @@ mapPatternVersionToTracks =
   , { device = Digitakt, parent = 7, child = 4, n = 16 }
   , { device = Digitakt, parent = 8, child = 4, n = 16 }
   , { device = Digitakt, parent = 9, child = 5, n = 16 }
+
+  , { device = Digitakt2, parent = 0, child = 0, n = 16 }
+  , { device = Digitakt2, parent = 1, child = 1, n = 16 }
+  , { device = Digitakt2, parent = 2, child = 1, n = 16 }
   ]
 
 patternName : Pattern -> String
@@ -268,39 +280,48 @@ structTrack : StorageStruct Track
 structTrack =
   ST.struct Track
     |> ST.version .version      "version"     Version.external
-    |> ST.field   .steps        "steps"       (Part.bytes 128)
+    |> ST.fieldV  .steps        "steps"       stepBytesPart
     |> ST.skipToOrOmit
                   .skip1  CppStructs.trackStorage_soundSlotLocks
-    |> ST.fieldV  .soundPLocks  "soundPLocks"
-                                              (\v ->
-                                                if Maybe.isJust (CppStructs.trackStorage_soundSlotLocks v)
-                                                  then (Part.bytes 64)
-                                                  else (Part.ephemeral ByteArray.empty)
-                                              )
+    |> ST.fieldV  .soundPLocks  "soundPLocks" soundPlocksPart
     |> ST.skipTo .skip2 CppStructs.trackStorage_sizeof
     |> ST.build "Track"
 
+soundPlocksPart : Version -> Part ByteArray
+soundPlocksPart v =
+  CppStructs.trackStorage_soundSlotLocks v
+  |> Maybe.andThen      (\_ -> numSteps v)
+  |> Maybe.map          (\n -> Part.bytes n)
+  |> Maybe.withDefault  (Part.ephemeral ByteArray.empty)
 
-allSteps : List Int
-allSteps = List.range 0 63
+
+stepBytesPart : Version -> Part ByteArray
+stepBytesPart v =
+  numSteps v
+  |> Maybe.map          (\n -> Part.bytes (2 * n))
+  |> Maybe.withDefault  (Part.fail "unknown device")
+  -- we don't bother to store this as Part.array n Part.uint16be
+
 
 anyTrigsSet : Track -> Bool
 anyTrigsSet track =
   let
     step i = (2 * i) + 1
+    count = ByteArray.length track.steps // 2
     trig i =
       ByteArray.get (step i) track.steps
         |> Maybe.unwrap False (\v -> Bitwise.and 0x0001 v == 1)
   in
-    List.any trig allSteps
+    List.any trig (List.range 0 (count - 1))
 
 trackSoundPLocks : Track -> Array (Maybe Int)
 trackSoundPLocks track =
   let
     getByte i = ByteArray.get i track.soundPLocks
+    count = ByteArray.length track.soundPLocks
     plock i = if i == 0xff then Nothing else Just i
   in
-    Array.initialize 64 (getByte >> Maybe.andThen plock)
+    Array.initialize count (getByte >> Maybe.andThen plock)
 
 setTrackSoundPlocks : Array (Maybe Int) -> Track -> Track
 setTrackSoundPlocks plocks track =
@@ -337,13 +358,14 @@ structPLock =
     |> ST.version .version    "vesion"    Version.external
     |> ST.field   .paramId    "paramId"   Part.uint8
     |> ST.field   .track      "track"     Part.uint8
-    |> ST.field   .steps      "steps"     (Part.bytes 128)
+    |> ST.fieldV  .steps      "steps"     stepBytesPart
     |> ST.build "PLock"
 
 plockSamplePLocks : Maybe Sound -> PLock -> Maybe (Array (Maybe Int))
 plockSamplePLocks sound plock =
   let
     getByte i = ByteArray.get (2 * i) plock.steps
+    count = ByteArray.length plock.steps // 2
     step i = if i == 0xff then Nothing else Just i
     isSamplePlock = sound
       |> Maybe.andThen (.version >> CppStructs.soundParameters_sampleParamId)
@@ -351,7 +373,7 @@ plockSamplePLocks sound plock =
       |> Maybe.withDefault False
   in
     if isSamplePlock
-      then Just <| Array.initialize 64 (getByte >> Maybe.andThen step)
+      then Just <| Array.initialize count (getByte >> Maybe.andThen step)
       else Nothing
 
 setPlockSamplePlocks : Maybe (Array (Maybe Int)) -> PLock -> PLock
@@ -408,6 +430,10 @@ kitVersionToSounds =
   , { device = Digitakt, parent = 7, child = 1, n = 8 }
   , { device = Digitakt, parent = 8, child = 2, n = 8 }
   , { device = Digitakt, parent = 9, child = 2, n = 8 }
+
+  , { device = Digitakt2, parent = 0, child = 0, n = 16 }
+  , { device = Digitakt2, parent = 1, child = 1, n = 16 }
+  , { device = Digitakt2, parent = 2, child = 1, n = 16 }
   ]
 
 kitVersionToMidiSetups : List SubStructArrayMap
@@ -422,6 +448,10 @@ kitVersionToMidiSetups =
   , { device = Digitakt, parent = 7, child = 1, n = 8 }
   , { device = Digitakt, parent = 8, child = 1, n = 8 }
   , { device = Digitakt, parent = 9, child = 1, n = 8 }
+
+  , { device = Digitakt2, parent = 0, child = 0, n = 16 }
+  , { device = Digitakt2, parent = 1, child = 1, n = 16 }
+  , { device = Digitakt2, parent = 2, child = 1, n = 16 }
   ]
 
 
@@ -567,9 +597,16 @@ structProjectSettings =
   ST.struct ProjectSettings
     |> ST.version .version      "version"     Version.uint32be
     |> ST.skipTo  .skip1                      CppStructs.projectSettingsStorage_sampleList
-    |> ST.field   .samples      "samples"     (Part.array 128 structSample)
+    |> ST.fieldV   .samples      "samples"    sampleBankPart
     |> ST.skipTo  .skip2                      CppStructs.projectSettingsStorage_sizeof
     |> ST.build "ProjectSettings"
+
+sampleBankPart : Version -> Part (Array Sample)
+sampleBankPart v =
+  case v.device of
+    Digitakt  -> Part.array  128 structSample
+    Digitakt2 -> Part.array 1024 structSample
+    _         -> Part.fail "unknown device"
 
 
 --

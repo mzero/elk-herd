@@ -58,9 +58,9 @@ something if the user deletes a pattern, or moves it, leaving a hole. While
 pattern and sample slot filled, even if they are logically empty.
 -}
 type alias Project =
-  { patterns        : BankOf Pattern    -- 128 x
-  , samplePool      : BankOf Sample     -- 128 x, mirrors binary.samples
-  , soundPool       : BankOf Sound      -- 128 x
+  { patterns        : BankOf Pattern
+  , samplePool      : BankOf Sample
+  , soundPool       : BankOf Sound
 
   , crossReference  : Rel.CrossReference
 
@@ -125,7 +125,7 @@ dump request in this order:
 
   * 128 PatternKit dumps
   * 0 to 128 Sound dumps (the sound pool, only non-empty entries)
-  * PatternSettings
+  * ProjectSettings
 
 This code (as well as others in the application), use the PatternSettings
 as the indication that all has been received.
