@@ -14,6 +14,7 @@ module Elektron.Struct.Part exposing
   
   , version
   , magicHead, magicTail
+  , fail
   )
 
 {-| This is somewhat like Codec, but a bit more.
@@ -199,3 +200,11 @@ magicHead = magic 0xbeefbace
 
 magicTail : Part Int
 magicTail = magic 0xbacef00c
+
+
+fail : String -> Part a
+fail msg =
+  { encoder = always Builder.empty
+  , decoder = Parser.fail msg
+  , view = \label _ -> [ fieldView label ("failed: " ++ msg) ]
+  }
