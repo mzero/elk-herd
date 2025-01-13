@@ -30,6 +30,8 @@ import ByteArray.Builder as Builder
 import ByteArray.Parser as Parser
 import ByteArray.SevenBit
 import Elektron.Digitakt.Dump as DT
+import Elektron.Instrument exposing (Device(..))
+import Elektron.Struct.Version as Version
 import SysEx.Internal exposing (..)
 
 {-| Dump messages come in request and response pairs. These all refer to the
@@ -109,16 +111,18 @@ parseStruct type_ index content =
     parseResponse fn p = Parser.map fn (Parser.map2 always p Parser.atEnd)
     parseRequest v = Parser.map (always v) Parser.atEnd
 
+    spec = Version.MatchDevice Digitakt
+
     parser = case type_ of
-        0x50 -> parseResponse (DTPatternKitResponse index)  DT.structPatternKit.decoder
+        0x50 -> parseResponse (DTPatternKitResponse index)  (DT.structPatternKit.decoder spec)
         0x60 -> parseRequest  (DTPatternKitRequest index)
-        0x51 -> parseResponse (DTPatternResponse index)     DT.structPattern.decoder
+        0x51 -> parseResponse (DTPatternResponse index)     (DT.structPattern.decoder spec)
         0x61 -> parseRequest  (DTPatternRequest index)
-        0x52 -> parseResponse (DTKitResponse index)         DT.structKit.decoder
+        0x52 -> parseResponse (DTKitResponse index)         (DT.structKit.decoder spec)
         0x62 -> parseRequest  (DTKitRequest index)
-        0x53 -> parseResponse (DTSoundResponse index)       DT.structSound.decoder
+        0x53 -> parseResponse (DTSoundResponse index)       (DT.structSound.decoder spec)
         0x63 -> parseRequest  (DTSoundRequest index)
-        0x54 -> parseResponse (DTProjectSettingsResponse)   DT.structProjectSettings.decoder
+        0x54 -> parseResponse (DTProjectSettingsResponse)   (DT.structProjectSettings.decoder spec)
         0x64 -> parseRequest  (DTProjectSettingsRequest)
         0x6f -> parseRequest  (DTWholeProjectRequest)
         _ -> Parser.succeed (Unknown type_ index content)
