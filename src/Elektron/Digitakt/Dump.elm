@@ -270,9 +270,9 @@ setPatternName s pattern = { pattern | name = s }
 
 type alias Track =
   { version:      Version
-  , steps:        ByteArray
+  , steps:        Array Int
   ,   skip1:        ByteArray
-  , soundPLocks:  ByteArray       -- may be empty for some versions
+  , soundPLocks:  Array Int       -- may be empty for some versions
   ,   skip2:        ByteArray
   }
 
@@ -280,25 +280,25 @@ structTrack : StorageStruct Track
 structTrack =
   ST.struct Track
     |> ST.version .version      "version"     Version.external
-    |> ST.fieldV  .steps        "steps"       stepBytesPart
+    |> ST.fieldV  .steps        "steps"       stepsPart
     |> ST.skipToOrOmit
                   .skip1  CppStructs.trackStorage_soundSlotLocks
     |> ST.fieldV  .soundPLocks  "soundPLocks" soundPlocksPart
     |> ST.skipTo .skip2 CppStructs.trackStorage_sizeof
     |> ST.build "Track"
 
-soundPlocksPart : Version -> Part ByteArray
+soundPlocksPart : Version -> Part (Array Int)
 soundPlocksPart v =
   CppStructs.trackStorage_soundSlotLocks v
   |> Maybe.andThen      (\_ -> numSteps v)
-  |> Maybe.map          (\n -> Part.bytes n)
-  |> Maybe.withDefault  (Part.ephemeral ByteArray.empty)
+  |> Maybe.map          (\n -> Part.array n Part.uint8)
+  |> Maybe.withDefault  (Part.ephemeral Array.empty)
 
 
-stepBytesPart : Version -> Part ByteArray
-stepBytesPart v =
+stepsPart : Version -> Part (Array Int)
+stepsPart v =
   numSteps v
-  |> Maybe.map          (\n -> Part.bytes (2 * n))
+  |> Maybe.map          (\n -> Part.array n Part.uint16be)
   |> Maybe.withDefault  (Part.fail "unknown device")
   -- we don't bother to store this as Part.array n Part.uint16be
 
@@ -306,34 +306,27 @@ stepBytesPart v =
 anyTrigsSet : Track -> Bool
 anyTrigsSet track =
   let
-    step i = (2 * i) + 1
-    count = ByteArray.length track.steps // 2
-    trig i =
-      ByteArray.get (step i) track.steps
-        |> Maybe.unwrap False (\v -> Bitwise.and 0x0001 v == 1)
+    check i =
+      case (Array.get i track.steps) of
+        Just v ->
+          if Bitwise.and 0x0001 v == 1
+            then True
+            else check (i + 1)
+        Nothing ->
+          False
   in
-    List.any trig (List.range 0 (count - 1))
+    check 0
 
 trackSoundPLocks : Track -> Array (Maybe Int)
 trackSoundPLocks track =
   let
-    getByte i = ByteArray.get i track.soundPLocks
-    count = ByteArray.length track.soundPLocks
     plock i = if i == 0xff then Nothing else Just i
   in
-    Array.initialize count (getByte >> Maybe.andThen plock)
+    Array.map plock track.soundPLocks
 
 setTrackSoundPlocks : Array (Maybe Int) -> Track -> Track
 setTrackSoundPlocks plocks track =
-  let
-    plockBytes =
-      ByteArray.section 0 (ByteArray.length track.soundPLocks)
-      <| ByteArray.fromArray
-      <| Array.map (Maybe.withDefault 0xff) plocks
-
-    soundPLocks = ByteArray.replace 0 plockBytes track.soundPLocks
-  in
-    { track | soundPLocks = soundPLocks}
+  { track | soundPLocks = Array.map (Maybe.withDefault 0xff) plocks}
 
 
 
@@ -346,7 +339,7 @@ type alias PLock =
   { version:  Version
   , paramId:  Int
   , track:    Int
-  , steps:    ByteArray
+  , steps:    Array Int
     -- 64x uint16be, but only high byte is used for some params, including
     -- sampleSlot which is the only plock we're interested in.  Hence it is
     -- easier to keep this as a ByteArray.
@@ -358,35 +351,35 @@ structPLock =
     |> ST.version .version    "vesion"    Version.external
     |> ST.field   .paramId    "paramId"   Part.uint8
     |> ST.field   .track      "track"     Part.uint8
-    |> ST.fieldV  .steps      "steps"     stepBytesPart
+    |> ST.fieldV  .steps      "steps"     stepsPart
     |> ST.build "PLock"
 
 plockSamplePLocks : Maybe Sound -> PLock -> Maybe (Array (Maybe Int))
 plockSamplePLocks sound plock =
   let
-    getByte i = ByteArray.get (2 * i) plock.steps
-    count = ByteArray.length plock.steps // 2
-    step i = if i == 0xff then Nothing else Just i
+    step v =
+      if Bitwise.and 0xff00 v == 0xff00
+        then Nothing
+        else Just <| Bitwise.shiftRightBy 8 v
     isSamplePlock = sound
       |> Maybe.andThen (.version >> CppStructs.soundParameters_sampleParamId)
       |> Maybe.map (\n -> n == plock.paramId)
       |> Maybe.withDefault False
   in
     if isSamplePlock
-      then Just <| Array.initialize count (getByte >> Maybe.andThen step)
+      then Just <| Array.map step plock.steps
       else Nothing
 
 setPlockSamplePlocks : Maybe (Array (Maybe Int)) -> PLock -> PLock
 setPlockSamplePlocks mSteps plock =
   let
-    stepBytes =
-      ByteArray.fromList
-      << List.concat
-      << Array.toList
-      << Array.map (Maybe.unwrap [0xff, 0xff] (\b -> [b, 0x00]))
+    step mv =
+      case mv of
+          Nothing -> 0xff00
+          Just v -> Bitwise.shiftLeftBy 8 v
   in
     case mSteps of
-      Just steps -> { plock | steps = stepBytes steps }
+      Just steps -> { plock | steps = Array.map step steps }
       Nothing -> plock
 
 
