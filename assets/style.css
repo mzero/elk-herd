@@ -759,6 +759,23 @@ label.btn {
 .hexdump .diff {
     color: #a22;
 }
+table.array {
+    font-family: 'Source Code Pro', monospace;
+    font-weight: 600;
+    line-height: 0.95em;
+    font-size: 0.75rem;
+    text-wrap: nowrap;
+    color: #999;
+}
+td {
+    text-align: right;
+    padding: 0 0.5rem;
+}
+td.index {
+    color: #9a0;
+    font-size: 0.5rem;
+    text-align: center;
+}
 
 .progress {
     margin: 0.5rem 0;

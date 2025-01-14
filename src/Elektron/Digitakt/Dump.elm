@@ -291,16 +291,15 @@ soundPlocksPart : Version -> Part (Array Int)
 soundPlocksPart v =
   CppStructs.trackStorage_soundSlotLocks v
   |> Maybe.andThen      (\_ -> numSteps v)
-  |> Maybe.map          (\n -> Part.array n Part.uint8)
+  |> Maybe.map          (\n -> Part.arrayHex n Part.uint8)
   |> Maybe.withDefault  (Part.ephemeral Array.empty)
 
 
 stepsPart : Version -> Part (Array Int)
 stepsPart v =
   numSteps v
-  |> Maybe.map          (\n -> Part.array n Part.uint16be)
+  |> Maybe.map          (\n -> Part.arrayHex n Part.uint16be)
   |> Maybe.withDefault  (Part.fail "unknown device")
-  -- we don't bother to store this as Part.array n Part.uint16be
 
 
 anyTrigsSet : Track -> Bool

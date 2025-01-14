@@ -7,7 +7,7 @@ module Elektron.Struct.Part exposing
   , bytes
   , chars
 
-  , list, array
+  , list, array, arrayHex
   , map
 
   , const, ephemeral
@@ -176,6 +176,22 @@ array n pa =
     , decoder = Parser.map Array.fromList pl.decoder
     , view = \label v -> pl.view label <| Array.toList v
    }
+
+
+arrayHex : Int -> Part Int -> Part (Array Int)
+arrayHex n pa =
+  let
+    pl = list n pa
+  in
+    { encoder = Builder.array pa.encoder
+    , decoder = Parser.map Array.fromList pl.decoder
+    , view = \label v ->
+      [ Html.div [ Attr.class "field field-fullwidth" ]
+        [ Html.span [ Attr.class "label" ] [ Html.text label ]
+        , arrayHexTable 16 v
+        ]
+      ]
+    }
 
 
 {-| A field that always has a constant, magic value.
