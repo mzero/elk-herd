@@ -510,6 +510,7 @@ isDefaultKit : Kit -> Bool
 isDefaultKit kit =
   let
     slots = Array.toIndexedList <| Array.map soundSampleSlot kit.sounds
+    isDigitakt = kit.version.device == Digitakt
     allZero = List.all (\(i, s) -> s == 0)
       -- older cleared kits had the slots all set to 0
     allDefault = List.all (\(i, s) -> s == (i + 1))
@@ -519,8 +520,13 @@ isDefaultKit kit =
       -- up with a permutation of 1..8 and zeros for deleted samples
     allDisabled =
       List.all (not << midiTrackEnabled) <| Array.toList kit.midiSetup
+    noMidiMachines = Maybe.map ((==) 0) kit.midiMask |> Maybe.withDefault True
   in
-    (allZero slots || allDefault slots || allSmall slots) && allDisabled
+    (allDefault slots
+    || (isDigitakt && (allSmall slots || allZero slots))
+    )
+    && allDisabled
+    && noMidiMachines
 
 
 -- currently we consider just the sample slot settings of the eight tracks
