@@ -71,7 +71,6 @@ import Elektron.Struct as ST
 import Elektron.Struct.Part as Part exposing (Part)
 import Elektron.Struct.Version as Version exposing (Version, VersionSpec(..))
 import Missing.Maybe as Maybe
-import Html exposing (main_)
 
 
 {- Structure names follow Elektron's header files names for these structures.
@@ -389,26 +388,46 @@ setPlockSamplePlocks mSteps plock =
 --
 
 type alias Kit =
-  { version:      Version
+  { magicHead:    Maybe Int
+  , version:      Version
   , name:         String
   ,   skip1:         ByteArray
   , sounds:       Array Sound         -- 8 x
   ,   skip2:         ByteArray
   , midiSetup:    Array MidiSetup     -- 8 x
   ,   skip3:         ByteArray
+  , midiMask:     Maybe Int
+  ,   skip4:         ByteArray
   }
 
 structKit : StorageStruct Kit
 structKit =
   ST.struct Kit
+    |> ST.field   .magicHead    "magicHead"   (Part.optional Part.magicHead)
     |> ST.version .version      "version"     Version.uint32be
     |> ST.field   .name         "name"        (Part.chars 16)
     |> ST.skipTo  .skip1                      CppStructs.kitStorage_trackSounds
     |> ST.fieldV  .sounds       "sounds"      (subStructArray kitVersionToSounds structSound)
     |> ST.skipTo  .skip2                      CppStructs.kitStorage_midiParams
     |> ST.fieldV  .midiSetup    "midiSetup"   (subStructArray kitVersionToMidiSetups structMidiSetup)
-    |> ST.skipTo  .skip3                      CppStructs.kitStorage_sizeof
+    |> ST.skipToOrOmit
+                  .skip3                      CppStructs.kitStorage_midiMask
+    |> ST.fieldV  .midiMask     "midiMask"    midiMaskPart
+    |> ST.skipTo  .skip4                      CppStructs.kitStorage_sizeof
     |> ST.build "Kit"
+
+{- NB: the magic header is optional because it exists in DT2 structures, but
+not DT1. The right thing to do would be to choose between parsing it, or
+making it ephemeral based on the device.
+
+However, since this field becomes BEFORE the version, we don't yet have a full
+version at parse time. We do have the device from the version spec... but we
+don't have the Struct machinery to get it there.
+
+For now, since the magic value will never be a valid version, the hack is to
+parse the version if we can, and if not, assume it isn't present.
+-}
+
 
 kitVersionToSounds : List SubStructArrayMap
 kitVersionToSounds =
@@ -445,6 +464,13 @@ kitVersionToMidiSetups =
   , { device = Digitakt2, parent = 1, child = 1, n = 16 }
   , { device = Digitakt2, parent = 2, child = 1, n = 16 }
   ]
+
+midiMaskPart : Version -> Part (Maybe Int)
+midiMaskPart v =
+  CppStructs.kitStorage_midiMask v
+  |> Maybe.map          (\_ -> Part.uint16be |> Part.map Just (Maybe.withDefault 0))
+  |> Maybe.withDefault  (Part.ephemeral Nothing)
+
 
 
 setKitName : String -> Kit -> Kit
@@ -551,7 +577,8 @@ setSoundSampleSlot i sound = { sound | sampleSlot = i }
 -- once there is more than just V0, this will need to be represented.
 
 type alias MidiSetup =
-  { version:      Version
+  { magicHead:    Maybe Int
+  , version:      Version
   ,   skip1:        ByteArray
   , enableMask:   Int
   ,   skip2:        ByteArray
@@ -560,6 +587,7 @@ type alias MidiSetup =
 structMidiSetup : StorageStruct MidiSetup
 structMidiSetup =
   ST.struct MidiSetup
+    |> ST.field   .magicHead    "magicHead"   (Part.optional Part.magicHead)
     |> ST.version .version      "version"     Version.uint32be
     |> ST.skipTo  .skip1                      CppStructs.midiSetupStorage_enableMask
     |> ST.field   .enableMask   "enableMask"  Part.uint16be
