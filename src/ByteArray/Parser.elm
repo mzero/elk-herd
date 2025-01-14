@@ -8,7 +8,7 @@ module ByteArray.Parser exposing
 
   , andThen
 
-  , maybe
+  , maybe, optional
   , oneOf
   , repeat
   , repeatToEnd
@@ -90,6 +90,14 @@ maybe (P pafn) = P (\st ->
   case pafn st of
     Ok (st_, a) -> Ok (st_, Just a)
     Err err -> Err err
+  )
+
+
+optional : Parser a -> Parser (Maybe a)
+optional (P pafn) = P (\st ->
+  case pafn st of
+    Ok (st_, a) -> Ok (st_, Just a)
+    Err err     -> Ok (st, Nothing)
   )
 
 oneOf : List (Parser a) -> Parser a

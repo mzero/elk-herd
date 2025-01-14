@@ -10,7 +10,7 @@ module Elektron.Struct.Part exposing
   , list, array, arrayHex
   , map
 
-  , const, ephemeral
+  , const, ephemeral, optional
 
   , magicHead, magicTail
   , fail
@@ -144,6 +144,14 @@ ephemeral a =
   { encoder = \_ -> Builder.empty
   , decoder = Parser.succeed a
   , view = \label v -> [ ]
+  }
+
+
+optional : Part a -> Part (Maybe a)
+optional pa =
+  { encoder = Maybe.map pa.encoder >> Maybe.withDefault Builder.empty
+  , decoder = Parser.optional pa.decoder
+  , view = \label -> Maybe.map (pa.view label) >> Maybe.withDefault [ ]
   }
 
 
