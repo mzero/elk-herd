@@ -154,14 +154,13 @@ buildPatternFromDump dPatternKit =
     name = Dump.patternKitName dPatternKit
 
     trackSounds = Array.map buildSoundFromDump dPatternKit.kit.sounds
-    aSound = Array.get 0 dPatternKit.kit.sounds
 
     buildSoundPLocksFromDump : Dump.Track -> SoundPLocks
     buildSoundPLocksFromDump = Array.map plockFromMaybe << Dump.trackSoundPLocks
 
     buildSamplePlocksFromDump : Dump.PLock -> Maybe SamplePLocks
     buildSamplePlocksFromDump =
-      Maybe.map (Array.map plockFromMaybe) << Dump.plockSamplePLocks aSound
+      Maybe.map (Array.map plockFromMaybe) << Dump.plockSamplePLocks
 
     hasTrigs =
       List.any Dump.anyTrigsSet

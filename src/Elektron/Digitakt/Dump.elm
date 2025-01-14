@@ -162,6 +162,14 @@ numSteps v =
       Digitakt2 -> Just 128
       _         -> Nothing
 
+numSampleSlots : Version -> Maybe Int
+numSampleSlots v =
+  case v.device of
+      Digitakt  -> Just  128
+      Digitakt2 -> Just 1024
+      _         -> Nothing
+
+
 --
 -- PATTERN
 --    corresponds to nothing - it is a pair of dumps given in response to
@@ -352,32 +360,42 @@ structPLock =
     |> ST.fieldV  .steps      "steps"     stepsPart
     |> ST.build "PLock"
 
-plockSamplePLocks : Maybe Sound -> PLock -> Maybe (Array (Maybe Int))
-plockSamplePLocks sound plock =
+plockSamplePLocks : PLock -> Maybe (Array (Maybe Int))
+plockSamplePLocks plock =
   let
-    step v =
-      if Bitwise.and 0xff00 v == 0xff00
-        then Nothing
-        else Just <| Bitwise.shiftRightBy 8 v
-    isSamplePlock = sound
-      |> Maybe.andThen (.version >> CppStructs.soundParameters_sampleParamId)
+    decodeStep =
+      case plock.version.device of
+        Digitakt ->
+          \v ->
+            if Bitwise.and 0xff00 v == 0xff00
+              then Nothing
+              else Just <| Bitwise.shiftRightBy 8 v
+        Digitakt2 -> \v -> if v == 0xffff then Nothing else Just v
+        _ -> always Nothing
+    isSamplePlock =
+      CppStructs.soundParameters_sampleParamId plock.version
       |> Maybe.map (\n -> n == plock.paramId)
       |> Maybe.withDefault False
   in
     if isSamplePlock
-      then Just <| Array.map step plock.steps
+      then Just <| Array.map decodeStep plock.steps
       else Nothing
 
 setPlockSamplePlocks : Maybe (Array (Maybe Int)) -> PLock -> PLock
 setPlockSamplePlocks mSteps plock =
   let
-    step mv =
-      case mv of
-          Nothing -> 0xff00
-          Just v -> Bitwise.shiftLeftBy 8 v
+    encodeStep =
+      case plock.version.device of
+        Digitakt ->
+          \mv ->
+            case mv of
+                Nothing -> 0xff00
+                Just v -> Bitwise.shiftLeftBy 8 v
+        Digitakt2 -> Maybe.withDefault 0xffff
+        _ -> always 0xffff
   in
     case mSteps of
-      Just steps -> { plock | steps = Array.map step steps }
+      Just steps -> { plock | steps = Array.map encodeStep steps }
       Nothing -> plock
 
 
@@ -533,11 +551,17 @@ structSound =
     |> ST.field   .tagMask      "tagMask"     Part.uint32be
     |> ST.field   .name         "name"        (Part.chars 16)
     |> ST.skipTo  .skip1                      CppStructs.soundStorage_sampleSlot
-    |> ST.field   .sampleSlot   "sampleSlot"  Part.uint8
+    |> ST.fieldV  .sampleSlot   "sampleSlot"  sampleSlotPart
     |> ST.skipTo  .skip2                      CppStructs.soundStorage_sampleFile
     |> ST.field   .sample       "sample"      structSample
     |> ST.skipTo  .skip3                      CppStructs.soundStorage_sizeof
     |> ST.build "Sound"
+
+sampleSlotPart : Version -> Part Int
+sampleSlotPart v =
+  case numSampleSlots v of
+    Just n  -> if n > 128 then Part.uint16be else Part.uint8
+    _       -> Part.fail "unknown sample pool size"
 
 sameSound : Sound -> Sound -> Bool
 sameSound a b =
@@ -623,10 +647,9 @@ structProjectSettings =
 
 sampleBankPart : Version -> Part (Array Sample)
 sampleBankPart v =
-  case v.device of
-    Digitakt  -> Part.array  128 structSample
-    Digitakt2 -> Part.array 1024 structSample
-    _         -> Part.fail "unknown device"
+  case numSampleSlots v of
+    Just n -> Part.array n structSample
+    _      -> Part.fail "unknown sample pool size"
 
 
 --
