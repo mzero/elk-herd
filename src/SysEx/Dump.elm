@@ -49,6 +49,7 @@ than zero or more `DTSoundResponse` messages, and finally a
 -}
 type ElkDump
   = Unknown Int Int ByteArray
+  | BadParse Int Int String ByteArray
 
   | DTPatternKitRequest Int
   | DTPatternKitResponse Int DT.PatternKit
@@ -135,7 +136,9 @@ parseStruct type_ index content =
         0x6f -> parseRequest  (DTWholeProjectRequest)
         _ -> Parser.succeed (Unknown type_ index content)
   in
-    Parser.parse parser content |> Parser.result
+    case Parser.parse parser content of
+        Ok v -> Parser.succeed v
+        Err msg -> Parser.succeed (BadParse type_ index msg content)
 
 parseDump : Parser.Parser ElkDump
 parseDump =
@@ -171,6 +174,9 @@ dumpBuilder ed =
   in
     case ed of
       Unknown type_ index content ->
+        msgBuilder type_ index (Builder.bytes content)
+
+      BadParse type_ index msg content ->
         msgBuilder type_ index (Builder.bytes content)
 
       DTPatternKitRequest index ->
@@ -220,6 +226,9 @@ viewDump ed =
     case ed of
       Unknown type_ index content ->
         buildView type_ "Unknown" index [hexdumpFieldView "content" content]
+
+      BadParse type_ index msg content ->
+        buildView type_ ("Bad Parser: " ++ msg) index [hexdumpFieldView "content" content]
 
       DTPatternKitRequest index ->
         buildView 0x60 "Digitakt Pattern Kit Request" index []
