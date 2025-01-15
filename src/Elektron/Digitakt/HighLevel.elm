@@ -47,6 +47,7 @@ import Elektron.Struct.Version exposing (Version)
 import Missing.Maybe as Maybe
 import SysEx.Dump
 import SysEx.SysEx exposing (SysEx)
+import SysEx.Connect exposing (instrument)
 
 {-| Note that the binary here is only the project settings structure. The
 `Pattern`, `Sample`, and `Sound` values hold on to their respective binary
@@ -70,14 +71,20 @@ type alias Project =
   }
 
 
-emptyProject : EI.DigitakStorageVersions -> Project
-emptyProject vers =
+emptyProject : EI.Instrument -> Project
+emptyProject instrument =
+  let
+    vers = EI.digitaktStorageVersions instrument
+    -- FIXME: should handle D2
+  in
   { patterns = Bank.initializeEmpty 128
   , samplePool = Bank.initializeEmpty 128
   , soundPool = Bank.initializeEmpty 128
   , crossReference = Rel.nullCrossReference
-  , binary = Blank.blankProjectSettings (Version EI.Digitakt vers.projectSettingsVersion)
-  , blankPattern = Blank.blankPatternKit (Version EI.Digitakt vers.patternAndKitVersion)
+  , binary =
+      Maybe.andThen (Blank.blankProjectSettings << Version EI.Digitakt << .projectSettingsVersion) vers
+  , blankPattern =
+      Maybe.andThen (Blank.blankPatternKit << Version EI.Digitakt << .patternAndKitVersion) vers
   }
 
 projectEmptySound : Project -> Maybe Dump.Sound

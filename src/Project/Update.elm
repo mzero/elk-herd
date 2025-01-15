@@ -173,18 +173,18 @@ validateProject verb origin project pr model =
             (action ++ " could not load the project:")
             str
 
-    versionWarning =
-      case DT.projectVersions project of
-        Nothing -> Nothing
-        Just vers ->
-          if vers.projectSettingsVersion > model.versions.projectSettingsVersion
-          || vers.patternAndKitVersion > model.versions.patternAndKitVersion
-            then Just """
-This project has patterns from a newer version of the Digitakt OS than your
-machine has. Sending this project to your Digitakt will not work. Consider
-upgrading your Digitakt to the lastest OS release.
-  """
-            else Nothing
+    versionWarning = Nothing -- FIXME
+--       case DT.projectVersions project of
+--         Nothing -> Nothing
+--         Just vers ->
+--           if vers.projectSettingsVersion > model.versions.projectSettingsVersion
+--           || vers.patternAndKitVersion > model.versions.patternAndKitVersion
+--             then Just """
+-- This project has patterns from a newer version of the Digitakt OS than your
+-- machine has. Sending this project to your Digitakt will not work. Consider
+-- upgrading your Digitakt to the lastest OS release.
+--   """
+--             else Nothing
 
     postUpdate =
       case List.filterMap identity [userMessage, versionWarning] of
@@ -343,7 +343,7 @@ update msg drive model =
     NoOp -> returnM model
     ClearProject ->
       returnM
-        (updateProject (\_ -> DT.emptyProject model.versions) model
+        (updateProject (\_ -> DT.emptyProject model.instrument) model
         |> undoable "Clear project"
         )
 
@@ -351,7 +351,7 @@ update msg drive model =
       returnMR
         { model
         | pendingReceive =
-            FromDevice disp (DT.emptyProject model.versions)
+            FromDevice disp (DT.emptyProject model.instrument)
         , progress = Progress.start "Fetching project from Digitakt..."
         }
         [StartDump Dump.DTWholeProjectRequest ReceiveDump]
@@ -414,7 +414,7 @@ update msg drive model =
               showAlert
               <| Alert.alert Alert.Danger "Error reading project:" message
 
-        emptyProject = DT.emptyProject model.versions
+        emptyProject = DT.emptyProject model.instrument
         job = readSysExJob emptyProject drive byteContents |> Job.map finish
         model_ =
           { model

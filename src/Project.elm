@@ -13,7 +13,7 @@ import Html
 
 import Commands as C
 import Elektron.Drive exposing (Drive)
-import Elektron.Instrument exposing (DigitakStorageVersions)
+import Elektron.Instrument exposing (Instrument)
 import Project.Base
 import Project.Update
 import Project.View
@@ -22,7 +22,7 @@ import SysEx.Client
 
 type alias Model = Project.Base.Model
 
-init : DigitakStorageVersions -> Model
+init : Instrument -> Model
 init = Project.Base.init
 
 

@@ -49,7 +49,7 @@ type PendingReceive
 type alias Checkpoint = (DT.Project, Sel.Selection)
 
 type alias Model =
-  { versions : EI.DigitakStorageVersions
+  { instrument : EI.Instrument
   , project : DT.Project
   , projectName : String
   , pendingReceive : PendingReceive
@@ -64,13 +64,13 @@ type alias Model =
   }
 
 
-init : EI.DigitakStorageVersions -> Model
-init versions =
+init : EI.Instrument -> Model
+init instrument =
   let
-    project = DT.emptyProject versions
+    project = DT.emptyProject instrument
     selection = Sel.initSelection
   in
-    { versions = versions
+    { instrument = instrument
     , project = project
     , projectName = "DT Project"
     , pendingReceive = NothingPending

@@ -6,7 +6,7 @@ module Elektron.Instrument exposing
 
   , report
 
-  , hasDriveSamples
+  , hasDriveSamples, hasProjects
 
   , DigitakStorageVersions
   , digitaktStorageVersions
@@ -46,7 +46,7 @@ fromDeviceResponse productId msgs deviceName =
     device =
       case productId of
         12 -> Digitakt
-        43 -> Digitakt2
+        42 -> Digitakt2
         _  -> Unknown
   in
     Instrument productId device deviceName msgs "????" "?.??"
@@ -75,6 +75,12 @@ hasDriveSamples inst =
     , 0x21  -- itemRename
     ]
 
+hasProjects : Instrument -> Bool
+hasProjects inst =
+  case inst.device of
+    Digitakt -> True
+    Digitakt2 -> True
+    _ -> False
 
 type alias DigitakStorageVersions =
   { projectSettingsVersion : Int
