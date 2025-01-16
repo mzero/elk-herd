@@ -26,6 +26,7 @@ import Regex
 import Build
 import ByteArray
 import Commands as C
+import Elektron.Instrument as EI
 import Html.Aria as Aria
 import Missing.List as List
 import Missing.Regex as Regex
@@ -40,12 +41,13 @@ type alias Model =
   , items : List (Direction, SysEx)
   , path : String
   , path2 : String
+  , device: EI.Device
   , hexDump : String
   , dumpIndex : String
   }
 
 init : Model
-init = Model False [] "/" "/" "" "0"
+init = Model False [] "/" "/" EI.Unknown "" "0"
 
 addItem : Direction -> SysEx -> Model -> Model
 addItem d s m =
@@ -83,6 +85,7 @@ type Msg
  | SendMessage ElkMessage
  | SendDirMsg (String -> ElkMessage)
  | SendDir2Msg (String -> String -> ElkMessage)
+ | SetDevice EI.Device
  | SendDumpRequest Int
  | SendSysEx SysEx
  | ProbeMessage Int
@@ -134,11 +137,13 @@ update msg model = case msg of
   SendDirMsg msgFn -> (model, [], [msgFn model.path])
   SendDir2Msg msgFn -> (model, [], [msgFn model.path model.path2])
   SendMessage dt -> (model, [], [dt])
+  SetDevice dev -> ({ model | device = dev }, [], [])
   SendDumpRequest type_ ->
     let
       index = String.toInt model.dumpIndex |> Maybe.withDefault 0
       sysEx = SysEx.Dump.Unknown type_ index ByteArray.empty
-    in (model, [ElektronDump sysEx], [])
+      dump = ElkDump model.device sysEx
+    in (model, [ElektronDump dump], [])
   SendSysEx sx -> (model, [sx], [])
   ProbeMessage msg_ -> (model, [], probeMessage msg_ model)
   DecodeHex -> (decodeHex model, [], [])
@@ -276,6 +281,7 @@ view model = if not Build.midiDebugger then Html.div [] [] else
         ]
         (
           Html.span [ Attr.class "input-group-addon" ] [ Html.text "Dump:" ]
+          :: devices
           :: Html.textarea [ Attr.value model.dumpIndex, Attr.tabindex 300, Attr.rows 1, Events.onInput SetDumpIndex ] [ ]
           :: List.map dumpBtn
             [ ("patKit", 0x60)
@@ -287,6 +293,28 @@ view model = if not Build.midiDebugger then Html.div [] [] else
             ]
         )
 
+    deviceItem d =
+      Html.a
+        [ Attr.class "dropdown-item"
+        , Attr.href "#"
+        , Events.onClick <| SetDevice d
+        ]
+        [ Html.text <| EI.productName d]
+
+    devices =
+      Html.div [ Attr.class "dropdown" ]
+        [ Html.button
+          [ Attr.class "btn btn-outline-secondary dropdown-toggle"
+          , Attr.attribute "data-toggle" "dropdown"
+          , Attr.type_ "button"
+          , Attr.id "device-picker"
+          , Aria.hasPopUp True
+          , Aria.expanded False
+          ]
+          [ Html.text (EI.productName model.device) ]
+        , Html.div [ Attr.class "dropdown-menu", Aria.labeledBy "device-picker" ]
+          <| List.map deviceItem [ EI.Digitakt, EI.Digitakt2, EI.Unknown ]
+        ]
   in
     Html.div [ Attr.id "midi-debug" ]
       [ Html.div
