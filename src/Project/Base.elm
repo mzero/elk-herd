@@ -50,6 +50,7 @@ type alias Checkpoint = (DT.Project, Sel.Selection)
 
 type alias Model =
   { instrument : EI.Instrument
+  , projectSpec : EI.ProjectSpec
   , project : DT.Project
   , projectName : String
   , pendingReceive : PendingReceive
@@ -64,13 +65,14 @@ type alias Model =
   }
 
 
-init : EI.Instrument -> Model
-init instrument =
+init : EI.Instrument -> EI.ProjectSpec -> Model
+init instrument projectSpec =
   let
-    project = DT.emptyProject instrument
+    project = DT.emptyProject instrument.device projectSpec
     selection = Sel.initSelection
   in
     { instrument = instrument
+    , projectSpec = projectSpec
     , project = project
     , projectName = "DT Project"
     , pendingReceive = NothingPending

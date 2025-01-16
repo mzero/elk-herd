@@ -125,7 +125,7 @@ update msg model =
         case model.result of
           WaitingForVersion inst ->
             let
-              inst_ = { inst | build = build, version = version }
+              inst_ = EI.updateFromVersionResponse build version inst
             in
               if EI.hasDriveSamples inst_
                 then outcome <| Good inst_

@@ -38,9 +38,9 @@ prepForMain : Model -> (Model, Cmd Msg)
 prepForMain model0 =
   let
     prepProjects inst model =
-      if EI.hasProjects inst
-        then { model | projectModel = Just <| Project.init inst }
-        else model
+      case inst.projectSpec of
+        Just spec -> { model | projectModel = Just <| Project.init inst spec }
+        Nothing -> model
 
     prepSamples inst model =
       if EI.hasDriveSamples inst

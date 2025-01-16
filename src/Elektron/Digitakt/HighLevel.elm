@@ -47,7 +47,6 @@ import Elektron.Struct.Version exposing (Version)
 import Missing.Maybe as Maybe
 import SysEx.Dump
 import SysEx.SysEx exposing (SysEx)
-import SysEx.Connect exposing (instrument)
 
 {-| Note that the binary here is only the project settings structure. The
 `Pattern`, `Sample`, and `Sound` values hold on to their respective binary
@@ -71,20 +70,18 @@ type alias Project =
   }
 
 
-emptyProject : EI.Instrument -> Project
-emptyProject instrument =
+emptyProject : EI.Device -> EI.ProjectSpec -> Project
+emptyProject device spec =
   let
-    vers = EI.digitaktStorageVersions instrument
-    -- FIXME: should handle D2
+    projectSettingsVersion = Version device spec.storageVersions.projectSettings
+    patternAndKitVersion = Version device spec.storageVersions.patternAndKit
   in
   { patterns = Bank.initializeEmpty 128
-  , samplePool = Bank.initializeEmpty 128
+  , samplePool = Bank.initializeEmpty spec.numSampleSlots
   , soundPool = Bank.initializeEmpty 128
   , crossReference = Rel.nullCrossReference
-  , binary =
-      Maybe.andThen (Blank.blankProjectSettings << Version EI.Digitakt << .projectSettingsVersion) vers
-  , blankPattern =
-      Maybe.andThen (Blank.blankPatternKit << Version EI.Digitakt << .patternAndKitVersion) vers
+  , binary = Blank.blankProjectSettings projectSettingsVersion
+  , blankPattern = Blank.blankPatternKit patternAndKitVersion
   }
 
 projectEmptySound : Project -> Maybe Dump.Sound
@@ -92,7 +89,7 @@ projectEmptySound proj =
   proj.blankPattern
   |> Maybe.andThen (\pat -> Array.get 0 pat.kit.sounds)
 
-projectVersions : Project -> Maybe EI.DigitakStorageVersions
+projectVersions : Project -> Maybe EI.StorageVersions
 projectVersions proj =
   let
     patternPartVersions f =
@@ -108,7 +105,7 @@ projectVersions proj =
 
     projectVersion = Maybe.map (.version >> .int) proj.binary
   in
-    Maybe.map2 EI.DigitakStorageVersions projectVersion patternVersion
+    Maybe.map2 EI.StorageVersions projectVersion patternVersion
 
 
 rebuildCrossReference : Project -> Project

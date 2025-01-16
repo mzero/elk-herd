@@ -94,6 +94,10 @@ updateProject fProj model =
   adjustSelection Sel.initSelection
     { model | project = DT.rebuildCrossReference <| fProj model.project }
 
+makeEmptyProject : Model -> DT.Project
+makeEmptyProject model =
+  DT.emptyProject model.instrument.device model.projectSpec
+
 processDrop : Sel.DropInfo -> Model -> Model
 processDrop dropInfo model =
   let
@@ -343,7 +347,7 @@ update msg drive model =
     NoOp -> returnM model
     ClearProject ->
       returnM
-        (updateProject (\_ -> DT.emptyProject model.instrument) model
+        (updateProject (\_ -> makeEmptyProject model) model
         |> undoable "Clear project"
         )
 
@@ -351,7 +355,7 @@ update msg drive model =
       returnMR
         { model
         | pendingReceive =
-            FromDevice disp (DT.emptyProject model.instrument)
+            FromDevice disp (makeEmptyProject model)
         , progress = Progress.start "Fetching project from Digitakt..."
         }
         [ StartDump 
@@ -417,7 +421,7 @@ update msg drive model =
               showAlert
               <| Alert.alert Alert.Danger "Error reading project:" message
 
-        emptyProject = DT.emptyProject model.instrument
+        emptyProject = makeEmptyProject model
         job = readSysExJob emptyProject drive byteContents |> Job.map finish
         model_ =
           { model
