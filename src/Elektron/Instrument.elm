@@ -1,5 +1,6 @@
 module Elektron.Instrument exposing
   ( Device(..)
+  , productName
 
   , Instrument
   , fromDeviceResponse
@@ -17,6 +18,14 @@ type Device
   = Digitakt
   | Digitakt2
   | Unknown
+
+
+productName : Device -> String
+productName d =
+  case d of
+    Digitakt  -> "Digitakt"
+    Digitakt2 -> "Digitakt2"
+    Unknown   -> "Unknown Device"
 
 
 {-| Information about an Elektron instrument that it provides in response to

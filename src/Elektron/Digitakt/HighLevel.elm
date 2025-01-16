@@ -212,7 +212,7 @@ enlivenPhantoms proj =
 
 updateFromDump : Drive -> SysEx.Dump.ElkDump -> Project -> Result String Project
 updateFromDump drive dump project =
-  case dump of
+  case dump.message of
     SysEx.Dump.DTPatternKitResponse i dPattern -> Ok <| updateProjectPattern i dPattern project
     SysEx.Dump.DTSoundResponse i dSound -> Ok <| updateProjectSound i dSound project
     SysEx.Dump.DTProjectSettingsResponse dProject -> Ok <| updateProject drive dProject project
@@ -245,8 +245,11 @@ toSysExDumps defSound project =
       Nothing -> []
 
     allDumps = patternDumps ++ soundDumps ++ projectDump
+    device =
+      Maybe.map (.version >> .device) project.binary
+      |> Maybe.withDefault EI.Unknown
   in
-    List.map SysEx.SysEx.ElektronDump allDumps
+    List.map (SysEx.SysEx.ElektronDump << SysEx.Dump.ElkDump device) allDumps
 
 
 toSysExDumpsForFile : Project -> List SysEx

@@ -23,9 +23,10 @@ import Html.Attributes as Attr
 
 import ByteArray exposing (ByteArray)
 import ByteArray.Builder as Builder
-import ByteArray.SevenBit
-import Missing.Maybe as Maybe
 import ByteArray.Parser as Parser
+import ByteArray.SevenBit
+import Elektron.Instrument exposing (Device(..))
+import Missing.Maybe as Maybe
 import SysEx.Dump exposing (..)
 import SysEx.Internal exposing (..)
 import SysEx.Message exposing (..)
@@ -47,7 +48,8 @@ parseSysEx =
   |> Parser.andThen (\s ->
       case s of
         0x10 -> parseAPI
-        0x0A -> Parser.map ElektronDump parseDump
+        0x0A -> Parser.map ElektronDump <| parseDump Digitakt
+        0x14 -> Parser.map ElektronDump <| parseDump Digitakt2
         _ -> Parser.fail ("unknown sysex type " ++ String.fromInt s)
     )
 
@@ -124,14 +126,25 @@ sysExToBytes sx = case sx of
       , Builder.uint16be <| Maybe.withDefault 0 respId
       , messageBuilder msg
       ]
-  ElektronDump ed -> RawMidiBytes <|
-    Builder.buildSequence
-      [ Builder.byte      0xF0                  -- sysex start
-      , Builder.byteList  [ 0x00, 0x20, 0x3C ]  -- Elektron
-      , Builder.byte      0x0A                  -- Elektron Dump
-      , dumpBuilder ed
-      , Builder.byte      0xF7
-      ]
+  ElektronDump ed ->
+    let
+      dumpCode =
+        case ed.device of
+          Digitakt -> Just 0x0A
+          Digitakt2 -> Just 0x14
+          _ -> Nothing
+    in
+    RawMidiBytes
+    <| case dumpCode of
+        Nothing -> ByteArray.empty
+        Just v ->
+          Builder.buildSequence
+            [ Builder.byte      0xF0                  -- sysex start
+            , Builder.byteList  [ 0x00, 0x20, 0x3C ]  -- Elektron
+            , Builder.byte      v
+            , dumpBuilder ed
+            , Builder.byte      0xF7
+            ]
 
 viewSysEx : SysEx -> List (Html.Html Never)
 viewSysEx sx = case sx of
@@ -145,7 +158,8 @@ viewSysEx sx = case sx of
     ++ Maybe.toList (Maybe.map (fieldView "resp" << String.fromInt) respId)
     ++ viewMessage msg
   ElektronDump ed ->
-    viewDump ed
+    [ fieldView "dump" <| Elektron.Instrument.productName ed.device ]
+    ++ viewDump ed
 
 
 

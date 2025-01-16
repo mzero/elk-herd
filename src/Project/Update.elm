@@ -218,7 +218,7 @@ receiveDump : Dump.ElkDump -> Drive -> Model -> Update
 receiveDump dump drive model =
   let
     step m =
-      case dump of
+      case dump.message of
         Dump.DTPatternKitResponse i _     -> continue (Progress.update (i, 128)) m
         Dump.DTSoundResponse i _          -> continue (Progress.update (i, 0))   m
         Dump.DTProjectSettingsResponse _  -> allDone   Progress.finish           m
@@ -354,7 +354,10 @@ update msg drive model =
             FromDevice disp (DT.emptyProject model.instrument)
         , progress = Progress.start "Fetching project from Digitakt..."
         }
-        [StartDump Dump.DTWholeProjectRequest ReceiveDump]
+        [ StartDump 
+            (Dump.ElkDump model.instrument.device Dump.DTWholeProjectRequest)
+            ReceiveDump
+        ]
 
     ReceiveDump dump ->
       receiveDump dump drive model
