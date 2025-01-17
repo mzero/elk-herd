@@ -57,6 +57,7 @@ type alias Model =
   , aboutToWriteFile : Bool
   , selection : Sel.Selection
   , nameEditing : Bool
+  , samplePoolOffset : Int
   , related : DT.Related
   , importing : Maybe Import.Model
   , alert : Alert.Model
@@ -79,6 +80,7 @@ init instrument projectSpec =
     , aboutToWriteFile = False
     , selection = selection
     , nameEditing = False
+    , samplePoolOffset = 0
     , related = DT.noRelations
     , importing = Nothing
     , alert = Alert.noAlert
@@ -120,6 +122,8 @@ type Msg
 
   | SelectionItemMsg Kind Int Sel.Msg
   | SelectionGlobalMsg Sel.Msg
+
+  | SetSamplePoolOffset Int
 
   | ChangeItemName Kind Int String
   | KeyDown Kind String

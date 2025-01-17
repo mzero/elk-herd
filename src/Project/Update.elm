@@ -358,7 +358,7 @@ update msg drive model =
             FromDevice disp (makeEmptyProject model)
         , progress = Progress.start "Fetching project from Digitakt..."
         }
-        [ StartDump 
+        [ StartDump
             (Dump.ElkDump model.instrument.device Dump.DTWholeProjectRequest)
             ReceiveDump
         ]
@@ -477,6 +477,9 @@ update msg drive model =
         cmd_ = focus (bankId k)
       in
         returnMC model_ cmd_
+
+    SetSamplePoolOffset n ->
+      returnM { model | samplePoolOffset = n }
 
     RenameItem k ->
       if Sel.kindStatus k model.selection == Sel.Selected

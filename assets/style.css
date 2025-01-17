@@ -63,7 +63,7 @@
 #titlebar-beer, #titlebar-beer:visited {
     background-image: url("beer.png");
     background-repeat: no-repeat;
-    background-position: 10px; 0;
+    background-position: 10px, 0;
     width: 36px;
     height: 28px;
     overflow: hidden;
@@ -151,7 +151,7 @@ h4.dt-name,
     align-items: center;
 }
 .section .section-header h3 {
-    flex: 1 0;
+    flex: 1 0 30%;
 }
 .section .section-header p {
     font-size: 0.85rem;
@@ -160,10 +160,24 @@ h4.dt-name,
     color: #666;
 }
 .section .section-header .btn-toolbar {
-    margin: 0.25rem 0.25rem 0.5rem;
+    margin: 0.25rem 0 0.5rem;
+    padding: 0 0.25rem;
+}
+.section-selector {
+    font-family: 'Source Code Pro', monospace;
+    font-weight: 600;
     flex: 0 0 auto;
 }
-.section .section-header .btn:first-child  {
+.section-selector button.selected { text-decoration: overline; }
+.section-selector button.active   { }
+.section-selector button.empty    { color: #ccc;}
+.section-selector button.related  { text-decoration: overline; }
+
+.section-commands {
+    flex: 1 0 30%;
+    justify-content: flex-end;
+}
+.section-commands .btn:first-child  {
     margin-left: 1rem;
 }
 .section .btn:disabled {
@@ -356,11 +370,10 @@ h4.dt-name,
 }
 
 
-
 .section .draggable {
     position: fixed;
-    transition top 0.25s ease;
-    transition left 0.25s ease;
+    transition: top 0.25s ease;
+    transition: left 0.25s ease;
 }
 .section .draggable .bank-item {
     position: absolute;
@@ -509,8 +522,8 @@ h4.dt-name,
 
 #drive #draggable {
     position: fixed;
-    transition top 0.25s ease;
-    transition left 0.25s ease;
+    transition: top 0.25s ease;
+    transition: left 0.25s ease;
     font-size: 0.8rem;
 }
 #drive #draggable .item {

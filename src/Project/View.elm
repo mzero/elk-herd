@@ -21,6 +21,7 @@ import Project.Import as Import
 import Project.Selection.Project as Sel
 import Project.Util exposing (..)
 import Undo
+import Elektron.Digitakt.Types exposing (Sample)
 
 
 commands : Model -> C.Commands Msg
@@ -122,7 +123,6 @@ sectionToolBar label k editing sel =
       if k == kSkip
         then Nothing
         else button btn
-
     group grp =
       case List.filterMap identity grp of
         [] -> Nothing
@@ -135,7 +135,7 @@ sectionToolBar label k editing sel =
             btns
   in
     Html.div
-      [ Attr.class "btn-toolbar"
+      [ Attr.class "btn-toolbar section-commands"
       , Aria.role "toolbar"
       , Aria.label label
       ]
@@ -181,6 +181,48 @@ sectionToolBar label k editing sel =
           ]
         ]
 
+bankSelector : Model -> Kind -> Html.Html Msg
+bankSelector model k =
+  let
+    sampleBankButton n =
+      let
+        start = n * 128
+        end = start + 127
+        range = List.range start end
+        itemEmpty i = Bank.get (Index i) model.project.samplePool |> Maybe.unwrap True DT.isEmptyItem
+        itemStatus i = Sel.itemStatus k i model.selection model.related
+        empty = List.all itemEmpty range
+        status = List.foldl (\i b -> if b == Sel.Plain then itemStatus i else b) Sel.Plain range
+      in
+        Html.button
+          [ Attr.class "btn btn-light btn-sm"
+          , Attr.classList
+              [ ("active", (model.samplePoolOffset == start))
+              , ("empty", empty)
+              , ("selected", status == Sel.Selected)
+              , ("dragged", status == Sel.Dragged)
+              , ("related", status == Sel.Related)
+              ]
+          , Attr.type_ "button"
+          , Attr.disabled False
+          , Events.onClick (SetSamplePoolOffset start)
+          ]
+          [ Html.text <| String.slice n (n + 1) "ABCDEFGHI" ]
+  in
+  case k of
+    KSample ->
+      if model.projectSpec.numSampleSlots > 128
+        then
+          Html.div
+            [ Attr.class "btn-toolbar section-selector"
+            , Aria.role "toolbar"
+            , Attr.title "Bank Selector"
+            , Attr.attribute "data-toggle" "tooltip"
+            , Attr.attribute "data-placement" "right"
+            ]
+            ( List.map sampleBankButton <| List.range 0 7 )
+        else Html.text ""
+    _ -> Html.text ""
 
 
 view : Model -> Html.Html Msg
@@ -203,7 +245,7 @@ view model =
             , Attr.class "bank-item"
             , Attr.classList
               [ ("empty", empty)
-              , ("zero", i == 0)
+              , ("zero", modBy 128 i == 0)
               , ("phantom", phantom)
               , ("selected", status == Sel.Selected)
               , ("dragged", status == Sel.Dragged)
@@ -263,8 +305,8 @@ view model =
               )
           Nothing -> []
 
-    bankView : String -> String -> Kind -> BankOf (DT.BankItem a) -> Html.Html Msg
-    bankView id label k bank =
+    bankView : String -> String -> Kind -> BankOf (DT.BankItem a) -> Int -> Html.Html Msg
+    bankView id label k bank offset =
       let
         status = Sel.kindStatus k model.selection
         mDragInfo = Sel.dragInfo k model.selection
@@ -289,7 +331,7 @@ view model =
         column c =
           Html.div
             [ Attr.class "bank-column" ]
-            <| List.map (\r -> item (c * 16 + r)) <| List.range 0 15
+            <| List.map (\r -> item (c * 16 + r + offset)) <| List.range 0 15
         columns = List.map column <| List.range 0 7
         item i =
           let
@@ -305,6 +347,7 @@ view model =
           [ Html.div
               [ Attr.class "section-header" ]
               [ Html.h3 [] [ Html.text label ]
+              , bankSelector model k
               , sectionToolBar (label ++ " Toolbar") k model.nameEditing model.selection
               ]
           , Html.div
@@ -328,9 +371,9 @@ view model =
       ]
 
     projectView =
-      [ bankView "patterns" "Patterns"    KPattern model.project.patterns
-      , bankView "samples"  "Sample Pool" KSample  model.project.samplePool
-      , bankView "sounds"   "Sound Pool"  KSound   model.project.soundPool
+      [ bankView "patterns" "Patterns"    KPattern model.project.patterns   0
+      , bankView "samples"  "Sample Pool" KSample  model.project.samplePool model.samplePoolOffset
+      , bankView "sounds"   "Sound Pool"  KSound   model.project.soundPool  0
       ]
 
     content =
