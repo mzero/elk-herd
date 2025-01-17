@@ -155,6 +155,7 @@ digitakt2Versions : VersionList
   -- assoc list of build to versions
 digitakt2Versions =
   [ ({- 1.02   -} "0035", { projectSettings = 0, patternAndKit = 0 })
+  , ({- 1.03A  -} "0041", { projectSettings = 0, patternAndKit = 0 })
   ]
 
 {-| Returns the versions for a given instrument by returning the last entry in
