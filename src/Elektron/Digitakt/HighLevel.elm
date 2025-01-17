@@ -156,9 +156,10 @@ updateProject drive dump proj =
     <| rebuildCrossReference
       { proj
       | samplePool =
-          makeBank
-            (T.buildSampleFromDump filesByHash)
-            (Array.toIndexedList dump.samples)
+          Bank.fromArray
+          <| Array.map
+              (T.buildSampleFromDump filesByHash >> Just)
+              dump.samples
       , binary = Just dump
       }
 

@@ -12,7 +12,7 @@ module Bank exposing
   , indexedMap
   , indexedMapUpdate
   , toIndexedList
-  , toArray
+  , fromArray, toArray
 
   , Shuffle
   , nullShuffle
@@ -128,6 +128,10 @@ toIndexedList : Bank i a -> List (Index i, Maybe a)
 toIndexedList (Bank a) =
   Array.toIndexedList a
   |> List.map (Tuple.mapFirst Index)
+
+
+fromArray : Array (Maybe a) -> Bank i a
+fromArray = Bank
 
 toArray : Bank i a -> Array (Maybe a)
 toArray (Bank a) = a
@@ -303,7 +307,7 @@ rereference (Shuffle { movesTo }) (Index i as idx) =
 
 {-| Shuffle the items. The source bank and destination bank can be the same.
 The returned bank is the permuted destination bank.  The fixup function is
-applied to items that are moved. 
+applied to items that are moved.
 -}
 applyShuffle : Shuffle i -> (a -> a) -> Bank i a -> Bank i a -> Bank i a
 applyShuffle (Shuffle { cameFrom }) fixupFn (Bank src) (Bank dst) =
