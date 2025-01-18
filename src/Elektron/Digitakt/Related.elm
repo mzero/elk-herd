@@ -1,7 +1,6 @@
 module Elektron.Digitakt.Related exposing
   ( Related
   , noRelations
-  , relations
   , mergeRelations
   , isRelatedPattern
   , isRelatedSample
@@ -27,11 +26,14 @@ module Elektron.Digitakt.Related exposing
   , freeSound
   )
 
+
 {-| This is really the heart of elk-herd! The cross refernce keeps track of
 which items are related to other items, and enables the UI to be repsonsive.
 -}
 
 import Array exposing (Array)
+import Set
+
 import Bank exposing (Bank, BankOf, Index(..))
 import Elektron.Digitakt.Types exposing (..)
 import Missing.Maybe as Maybe
@@ -41,30 +43,34 @@ phantom type `i` is same as the type of items being related to.
 -}
 type RelationArray i = RA (Array Bool)
 
+{-  As implemented it is an invariant that the last element in the Array is
+always True.
+
+TODO: Do some benchmarking to see which is better: this or `Set (Index i)`
+-}
+
 emptyRelationArray : RelationArray i
-emptyRelationArray = Array.repeat 128 False |> RA
+emptyRelationArray = RA Array.empty
 
 isEmptyRelationArray : RelationArray i -> Bool
-isEmptyRelationArray (RA ra) =
-  let
-    go i =
-      case Array.get i ra of
-        Just True -> False
-        Just False -> go (i + 1)
-        Nothing -> True
-  in
-    go 0
+isEmptyRelationArray (RA ra) = Array.length ra == 0
 
 isRelated : Index i -> RelationArray i -> Bool
 isRelated (Index i) (RA ra) = Array.get i ra |> Maybe.withDefault False
 
+relatedExtent : RelationArray i -> Int
+relatedExtent (RA ra) = Array.length ra
+
 asRelationArray : List (Index i) -> RelationArray i
-asRelationArray =
+asRelationArray indicies =
   let
-    include (Index i) a = Array.set i True a
-    (RA ra0) = emptyRelationArray
+    intList = List.map Bank.indexToInt indicies
+    intSet = Set.fromList intList
   in
-    List.foldl include ra0 >> RA
+    case List.maximum intList of
+      Nothing -> emptyRelationArray
+      Just imax ->
+        RA <| Array.initialize (imax + 1) (\i -> Set.member i intSet)
 
 asRelatedIndices : RelationArray i -> List (Index i)
 asRelatedIndices (RA ra) =
@@ -75,6 +81,38 @@ asRelatedIndices (RA ra) =
         else Nothing
   in
     Array.toIndexedList ra |> List.filterMap include
+
+mergeRelated : List (RelationArray i) -> RelationArray i
+mergeRelated ras =
+  case ras of
+    [] -> emptyRelationArray
+    [ra] -> ra
+    _ ->
+      let
+        n = List.foldl (relatedExtent >> max) 0 ras
+        inAny i = List.any (isRelated (Index i)) ras
+      in
+        RA <| Array.initialize n inAny
+
+transpose : Array (RelationArray a) -> Array (RelationArray b)
+transpose outer =
+  {- Note there is a loss of type safety here as we don't know what type
+  the array's axis is. Thus this can turn a RelationArray into any other type
+  while transposing it.
+  -}
+  let
+    size = Array.foldl (relatedExtent >> max) 0 outer
+    indexedOuter = Array.toIndexedList outer
+    inlcude i (j, ra) =
+      if isRelated (Index i) ra
+        then Just <| Index j
+        else Nothing
+    slice i =
+      indexedOuter
+      |> List.filterMap (inlcude i)
+      |> asRelationArray
+  in
+    Array.initialize size slice
 
 {-| Represents the items related to something. For example, there is one of
 these objects for a pattern, and indicates which other items that pattern
@@ -104,28 +142,17 @@ noRelations =
     }
 
 
-relations : List (Index Pattern) -> List (Index Sample) -> List (Index Sound)
-  -> Related
-relations patterns samples sounds =
-  Related
-    { patterns = asRelationArray patterns
-    , samples = asRelationArray samples
-    , sounds = asRelationArray sounds
-    }
-
 mergeRelations_ : List Related -> Related
 mergeRelations_ relateds =
   let
     pick sel (Related r) = sel r
 
-    merge sel =
-      Array.initialize 128
-        (\i -> List.any (\r -> isRelated (Index i) (pick sel r)) relateds)
+    merge sel = mergeRelated <| List.map (pick sel) relateds
   in
     Related
-      { patterns = RA <| merge .patterns
-      , samples = RA <| merge .samples
-      , sounds = RA <| merge .sounds
+      { patterns = merge .patterns
+      , samples = merge .samples
+      , sounds = merge .sounds
       }
 
 mergeRelations : List Related -> Related
@@ -156,7 +183,7 @@ relatedSounds (Related r) = asRelatedIndices r.sounds
 
 
 {-| This is the big cheese: For every pattern, sample, and sound, a `Related`
-object. Yep, that's 3x128x3x128 booleans!
+object.
 
 Remember that items are related if they reference, or are referenced:
 
@@ -195,9 +222,6 @@ buildCrossReference :
   BankOf Pattern -> BankOf Sample -> BankOf Sound -> CrossReference
 buildCrossReference patterns samplePool soundPool =
   let
-    -- This code exchanges some of the type safety for clarity and
-    -- directness in computing the cross references
-
     soundSample : Index Sound -> Maybe (Index Sample)
     soundSample i =
       Bank.get i soundPool |> Maybe.map .sampleSlot
@@ -250,19 +274,6 @@ buildCrossReference patterns samplePool soundPool =
         )
       |> Array.fromList
 
-    transpose : Array (RelationArray a) -> Array (RelationArray b)
-    transpose outer =
-      let
-        item i j =
-          Array.get j outer
-          |> Maybe.unwrap False
-            (\(RA inner) ->
-              Array.get i inner
-              |> Maybe.withDefault False)
-
-        slice i = Array.initialize 128 (item i) |> RA
-      in
-        Array.initialize 128 slice
 
     sampleToPattern = transpose patternToSample
     soundToPattern = transpose patternToSound

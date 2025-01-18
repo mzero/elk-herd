@@ -28,8 +28,7 @@ module Bank exposing
   )
 
 {-| Banks are a set of fixed slots where some kind of data can be stored.
-For example, each project in a Digitakt has a bank of 128 patterns, and a
-bank of 127 samples.
+For example, each project in a Digitakt has a bank of 128 patterns.
 -}
 
 import Array exposing (Array)

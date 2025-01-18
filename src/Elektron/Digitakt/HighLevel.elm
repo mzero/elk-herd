@@ -117,10 +117,6 @@ rebuildCrossReference proj =
   }
 
 
-makeBank : (a -> b) -> List (Int, a) -> BankOf b
-makeBank f =
-  List.foldl (\(i, d) -> Bank.put (Index i) (f d)) (Bank.initializeEmpty 128)
-
 {- These three update functions are called as the binary dumps are received
 from the instrument.
 
