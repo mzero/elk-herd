@@ -48,8 +48,9 @@ type ElkMessage
   | FileDeleteResponse Bool
   | ItemRenameRequest String String
   | ItemRenameResponse Bool
-  --| FileSearchRequest Int Int
-  --| FileSearchResponse Bool String
+
+  | SampleFileInfoRequest Int Int
+  | SampleFileInfoResponse Bool Int Int String
 
   | FileReadOpenRequest String
   | FileReadOpenResponse Bool Fd Int
@@ -111,7 +112,7 @@ apiDirDelete = buildApi 0x12 "DirDelete"
   (msg1 DirDeleteRequest (argString0win1252 "path"))
   (msg1 DirDeleteResponse (argBool "ok"))
 
--- 0x13 ?
+-- 0x13 Enumerate sample files, deprecated
 
 -- 0x2n Messages: File operations --
 
@@ -127,18 +128,19 @@ apiItemRename = buildApi 0x21 "ItemRename"
     (argString0win1252 "to"))
   (msg1 ItemRenameResponse (argBool "ok"))
 
--- 0x22 ?
+-- 0x22 Get Sample File Info From Path (V1), deprecated
 
--- 0x23 ?
-
---apiFileSearch : Api (Msg2 ElkMessage Int Int) (Msg2 Bool String)
---apiFileSearch = buildApi 0x23 "FileSearch"
---  (msg2 FileSearchRequest
---    (argUint32be "hash")
---    (argUint32be "len"))
---  (msg2 FileSearchResponse
---    (argBool "ok")
---    (argString0win1252 "path"))
+apiSampleFileInfo :
+  Api (Msg2 ElkMessage Int Int) (Msg4 ElkMessage Bool Int Int String)
+apiSampleFileInfo = buildApi 0x23 "SampleFileInfo"
+ (msg2 SampleFileInfoRequest
+   (argUint32be "hash")
+   (argUint32be "len"))
+ (msg4 SampleFileInfoResponse
+   (argBool "ok")
+   (argUint32be "len")        -- yes, these are backwards
+   (argUint32be "hash")
+   (argString0win1252 "path"))
 
 -- 0x3n Messages: Transfer files from device --
 
@@ -233,6 +235,8 @@ messageBuilder msg = case msg of
   FileDeleteResponse ok             -> apiFileDelete.response.build ok
   ItemRenameRequest from to         -> apiItemRename.request.build from to
   ItemRenameResponse ok             -> apiItemRename.response.build ok
+  SampleFileInfoRequest h s         -> apiSampleFileInfo.request.build h s
+  SampleFileInfoResponse ok s h n   -> apiSampleFileInfo.response.build ok s h n
   FileReadOpenRequest path          -> apiFileReadOpen.request.build path
   FileReadOpenResponse ok fd len    -> apiFileReadOpen.response.build ok fd len
   FileReadCloseRequest fd           -> apiFileReadClose.request.build fd
@@ -275,7 +279,7 @@ parserApiTable =
       , msg apiDirDelete
       , msg apiFileDelete
       , msg apiItemRename
-      --, msg apiFileSearch
+      , msg apiSampleFileInfo
       , msg apiFileReadOpen
       , msg apiFileReadClose
       , msg apiFileRead
@@ -314,6 +318,8 @@ viewMessage msg = List.map (Html.map never) <| case msg of
   FileDeleteResponse ok             -> apiFileDelete.response.view ok
   ItemRenameRequest from to         -> apiItemRename.request.view from to
   ItemRenameResponse ok             -> apiItemRename.response.view ok
+  SampleFileInfoRequest h s         -> apiSampleFileInfo.request.view h s
+  SampleFileInfoResponse ok s h n   -> apiSampleFileInfo.response.view ok s h n
   FileReadOpenRequest path          -> apiFileReadOpen.request.view path
   FileReadOpenResponse ok fd len    -> apiFileReadOpen.response.view ok fd len
   FileReadCloseRequest fd           -> apiFileReadClose.request.view fd

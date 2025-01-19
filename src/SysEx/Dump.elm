@@ -1,5 +1,5 @@
 module SysEx.Dump exposing
-  ( ElkDump(..)
+  ( ElkDump, DumpMessage(..)
 
   , dumpBuilder
   , parseDump
@@ -35,6 +35,8 @@ import Elektron.Struct.Version as Version
 import SysEx.Internal exposing (..)
 import List exposing (sum)
 
+
+type alias ElkDump = { device : Device, message : DumpMessage }
 {-| Dump messages come in request and response pairs. These all refer to the
 current loaded project. The reqeusts with `Int` specify the slot number to
 dump.
@@ -47,8 +49,9 @@ than zero or more `DTSoundResponse` messages, and finally a
 `DTProjectSettingsResponse` message. There is no other indication that it is
 "done"... so we rely on that order of responses to show progress to the user.
 -}
-type ElkDump
+type DumpMessage
   = Unknown Int Int ByteArray
+  | BadParse Int Int String ByteArray
 
   | DTPatternKitRequest Int
   | DTPatternKitResponse Int DT.PatternKit
@@ -113,13 +116,13 @@ parsePayload payload =
   in
     Parser.parse p payload |> Parser.result
 
-parseStruct : Int -> Int -> ByteArray -> Parser.Parser ElkDump
-parseStruct type_ index content =
+parseStruct : Device -> Int -> Int -> ByteArray -> Parser.Parser ElkDump
+parseStruct device type_ index content =
   let
     parseResponse fn p = Parser.map fn (Parser.map2 always p Parser.atEnd)
     parseRequest v = Parser.map (always v) Parser.atEnd
 
-    spec = Version.MatchDevice Digitakt
+    spec = Version.MatchDevice device
 
     parser = case type_ of
         0x50 -> parseResponse (DTPatternKitResponse index)  (DT.structPatternKit.decoder spec)
@@ -135,17 +138,20 @@ parseStruct type_ index content =
         0x6f -> parseRequest  (DTWholeProjectRequest)
         _ -> Parser.succeed (Unknown type_ index content)
   in
-    Parser.parse parser content |> Parser.result
+    Parser.map (ElkDump device)
+    <| case Parser.parse parser content of
+        Ok v -> Parser.succeed v
+        Err msg -> Parser.succeed (BadParse type_ index msg content)
 
-parseDump : Parser.Parser ElkDump
-parseDump =
+parseDump : Device -> Parser.Parser ElkDump
+parseDump device =
   Parser.expectByte 0x00          |> Parser.andThen (\deviceId  ->
   Parser.byte                     |> Parser.andThen (\type_ ->
   Parser.expectList [0x01, 0x01]  |> Parser.andThen (\version ->
   Parser.byte                     |> Parser.andThen (\index ->
   Parser.upToByte 0xF7            |> Parser.andThen (\payload ->
   parsePayload payload            |> Parser.andThen (\content ->
-  parseStruct type_ index content
+  parseStruct device type_ index content
   ))))))
 
 dumpBuilder : ElkDump -> Builder.Builder
@@ -169,8 +175,11 @@ dumpBuilder ed =
           , buildUint14be count
           ]
   in
-    case ed of
+    case ed.message of
       Unknown type_ index content ->
+        msgBuilder type_ index (Builder.bytes content)
+
+      BadParse type_ index msg content ->
         msgBuilder type_ index (Builder.bytes content)
 
       DTPatternKitRequest index ->
@@ -217,9 +226,12 @@ viewDump ed =
       ]
       ++ html
   in
-    case ed of
+    case ed.message of
       Unknown type_ index content ->
         buildView type_ "Unknown" index [hexdumpFieldView "content" content]
+
+      BadParse type_ index msg content ->
+        buildView type_ ("Bad Parser: " ++ msg) index [hexdumpFieldView "content" content]
 
       DTPatternKitRequest index ->
         buildView 0x60 "Digitakt Pattern Kit Request" index []

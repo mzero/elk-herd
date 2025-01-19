@@ -3,6 +3,7 @@ module Project.Update exposing
   , subscriptions
   )
 
+import Dict
 import Process
 import Task
 
@@ -14,7 +15,7 @@ import Elektron.Digitakt.HighLevel as DT
 import Elektron.Digitakt.Related as DT
 import Elektron.Digitakt.Verify as DT
 import Elektron.Digitakt.Types as DT
-import Elektron.Drive exposing (Drive)
+import Elektron.Drive as Drive exposing (Drive)
 import Job exposing (Job, Step(..))
 import Missing.Time as Time
 import Progress
@@ -25,6 +26,7 @@ import Project.Util exposing (..)
 import Portage
 import SysEx.Client exposing (..)
 import SysEx.Dump as Dump
+import SysEx.Message as Message
 import SysEx.SysEx
 import Undo
 
@@ -94,6 +96,10 @@ updateProject fProj model =
   adjustSelection Sel.initSelection
     { model | project = DT.rebuildCrossReference <| fProj model.project }
 
+makeEmptyProject : Model -> DT.Project
+makeEmptyProject model =
+  DT.emptyProject model.instrument.device model.projectSpec
+
 processDrop : Sel.DropInfo -> Model -> Model
 processDrop dropInfo model =
   let
@@ -136,9 +142,11 @@ updateSelection selFn model =
       Just dropInfo -> processDrop dropInfo model
 
 validateProject :
-  String -> String -> DT.Project -> PendingReceive -> Model -> Update
-validateProject verb origin project pr model =
+  String -> String -> Drive -> DT.Project -> PendingReceive -> Model -> Update
+validateProject verb origin drive project0 pr model =
   let
+    knownNames = Dict.union (Drive.fileNamesByHash drive) model.extraFileNames
+    project = DT.updateSampleNames knownNames project0
     (userMessage, ok) = DT.validateProject project
     action = verb ++ " " ++ origin
 
@@ -157,6 +165,18 @@ validateProject verb origin project pr model =
         FromFile LoadProject name -> nameFn name >> dispFn LoadProject
         FromFile StartImport _  -> dispFn StartImport
 
+    getSampleNames m =
+      if ok
+        then returnMR m
+          (DT.neededSampleNames project
+          |> List.map (\(hash, size) ->
+            RequestMessage
+            (Message.SampleFileInfoRequest hash size)
+              -- yes, backwards from normal!
+            ReceiveSampleFileInfo
+          ))
+        else returnM m
+
     model_ =
       if ok
         then modelFn model
@@ -173,18 +193,18 @@ validateProject verb origin project pr model =
             (action ++ " could not load the project:")
             str
 
-    versionWarning =
-      case DT.projectVersions project of
-        Nothing -> Nothing
-        Just vers ->
-          if vers.projectSettingsVersion > model.versions.projectSettingsVersion
-          || vers.patternAndKitVersion > model.versions.patternAndKitVersion
-            then Just """
-This project has patterns from a newer version of the Digitakt OS than your
-machine has. Sending this project to your Digitakt will not work. Consider
-upgrading your Digitakt to the lastest OS release.
-  """
-            else Nothing
+    versionWarning = Nothing -- FIXME
+--       case DT.projectVersions project of
+--         Nothing -> Nothing
+--         Just vers ->
+--           if vers.projectSettingsVersion > model.versions.projectSettingsVersion
+--           || vers.patternAndKitVersion > model.versions.patternAndKitVersion
+--             then Just """
+-- This project has patterns from a newer version of the Digitakt OS than your
+-- machine has. Sending this project to your Digitakt will not work. Consider
+-- upgrading your Digitakt to the lastest OS release.
+--   """
+--             else Nothing
 
     postUpdate =
       case List.filterMap identity [userMessage, versionWarning] of
@@ -192,7 +212,32 @@ upgrading your Digitakt to the lastest OS release.
         msgs -> thenUpdate <| showAlert (alert (String.join "\n\n" msgs))
 
   in
-    returnM model_ |> postUpdate
+    returnM model_ |> thenUpdate getSampleNames |> postUpdate
+
+
+receiveSampleFileInfo : Message.ElkMessage -> Model -> Update
+receiveSampleFileInfo msg model =
+  case msg of
+    (Message.SampleFileInfoResponse ok size hash path) ->
+      if ok
+        then
+          let
+            name =
+              case String.split "/" path |> List.reverse of
+                [] -> "/"
+                (n :: _) -> n
+            hashSize = Drive.hashSize hash size
+            justOne = Dict.singleton hashSize name
+            extraFileNames = Dict.insert hashSize name model.extraFileNames
+          in
+          returnM
+            { model
+            | project = DT.updateSampleNames justOne model.project
+            , extraFileNames = extraFileNames
+            }
+        else
+          returnM model
+    _ -> returnM model
 
 
 startEdit : Model -> Update
@@ -218,7 +263,7 @@ receiveDump : Dump.ElkDump -> Drive -> Model -> Update
 receiveDump dump drive model =
   let
     step m =
-      case dump of
+      case dump.message of
         Dump.DTPatternKitResponse i _     -> continue (Progress.update (i, 128)) m
         Dump.DTSoundResponse i _          -> continue (Progress.update (i, 0))   m
         Dump.DTProjectSettingsResponse _  -> allDone   Progress.finish           m
@@ -230,7 +275,7 @@ receiveDump dump drive model =
     allDone pfn m =
       case m.pendingReceive of
         FromDevice disp p ->
-          validateProject "Fetch" "from Digitakt" p m.pendingReceive
+          validateProject "Fetch" "from Digitakt" drive p m.pendingReceive
             { m
             | pendingReceive = NothingPending
             , progress = pfn m.progress
@@ -250,7 +295,7 @@ receiveDump dump drive model =
   in
     case model.pendingReceive of
       FromDevice disp project ->
-        case DT.updateFromDump drive dump project of
+        case DT.updateFromDump dump project of
           Ok p -> step { model | pendingReceive = FromDevice disp p }
           Err error -> alert error model
       _ -> finished model
@@ -300,8 +345,8 @@ writeSysExJob fileName project =
       |> Job.map (Portage.writeBinaryFile fileName "application/octet-stream")
     )
 
-readSysExJob : DT.Project -> Drive -> ByteArray -> Job (Int, Int) (Result String DT.Project)
-readSysExJob emptyProject drive allBytes =
+readSysExJob : DT.Project -> ByteArray -> Job (Int, Int) (Result String DT.Project)
+readSysExJob emptyProject allBytes =
   let
     n = ByteArray.length allBytes
     p b = (n - ByteArray.length b, n)
@@ -312,7 +357,7 @@ readSysExJob emptyProject drive allBytes =
         else
           case SysEx.SysEx.readNextSysEx bytes of
             Ok (dump, rest) ->
-              case DT.updateFromSysEx drive dump project of
+              case DT.updateFromSysEx dump project of
                 Ok proj_ -> NextStep (p rest) (\_ -> step rest proj_)
                 Err error -> Complete (Err error)
             Err error -> Complete (Err error)
@@ -343,7 +388,7 @@ update msg drive model =
     NoOp -> returnM model
     ClearProject ->
       returnM
-        (updateProject (\_ -> DT.emptyProject model.versions) model
+        (updateProject (\_ -> makeEmptyProject model) model
         |> undoable "Clear project"
         )
 
@@ -351,13 +396,19 @@ update msg drive model =
       returnMR
         { model
         | pendingReceive =
-            FromDevice disp (DT.emptyProject model.versions)
+            FromDevice disp (makeEmptyProject model)
         , progress = Progress.start "Fetching project from Digitakt..."
         }
-        [StartDump Dump.DTWholeProjectRequest ReceiveDump]
+        [ StartDump
+            (Dump.ElkDump model.instrument.device Dump.DTWholeProjectRequest)
+            ReceiveDump
+        ]
 
     ReceiveDump dump ->
       receiveDump dump drive model
+
+    ReceiveSampleFileInfo info ->
+      receiveSampleFileInfo info model
 
     SendProject ->
       let
@@ -409,13 +460,13 @@ update msg drive model =
         finish result =
           case result of
             Ok p ->
-              validateProject "Open" "Project File" p model.pendingReceive
+              validateProject "Open" "Project File" drive p model.pendingReceive
             Err message ->
               showAlert
               <| Alert.alert Alert.Danger "Error reading project:" message
 
-        emptyProject = DT.emptyProject model.versions
-        job = readSysExJob emptyProject drive byteContents |> Job.map finish
+        emptyProject = makeEmptyProject model
+        job = readSysExJob emptyProject byteContents |> Job.map finish
         model_ =
           { model
           | pendingReceive = NothingPending
@@ -470,6 +521,9 @@ update msg drive model =
         cmd_ = focus (bankId k)
       in
         returnMC model_ cmd_
+
+    SetSamplePoolOffset n ->
+      returnM { model | samplePoolOffset = n }
 
     RenameItem k ->
       if Sel.kindStatus k model.selection == Sel.Selected

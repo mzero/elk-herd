@@ -18,12 +18,14 @@ module Project.Base exposing
   , itemName
   )
 
+import Dict
 import Json.Decode as D
 
 import Alert
 import ByteArray exposing (ByteArray)
 import Elektron.Digitakt.HighLevel as DT
 import Elektron.Digitakt.Related as DT
+import Elektron.Drive as Drive
 import Elektron.Instrument as EI
 import Job
 import Missing.Time as Time
@@ -33,6 +35,7 @@ import Project.Selection.Project as Sel
 import Project.Util exposing (..)
 import SysEx.Client
 import SysEx.Dump
+import SysEx.Message exposing (ElkMessage)
 import Undo
 
 {-| What to do with a project after we've received Import.
@@ -49,13 +52,16 @@ type PendingReceive
 type alias Checkpoint = (DT.Project, Sel.Selection)
 
 type alias Model =
-  { versions : EI.DigitakStorageVersions
+  { instrument : EI.Instrument
+  , projectSpec : EI.ProjectSpec
   , project : DT.Project
   , projectName : String
+  , extraFileNames : Drive.FileNamesByHash
   , pendingReceive : PendingReceive
   , aboutToWriteFile : Bool
   , selection : Sel.Selection
   , nameEditing : Bool
+  , samplePoolOffset : Int
   , related : DT.Related
   , importing : Maybe Import.Model
   , alert : Alert.Model
@@ -64,19 +70,22 @@ type alias Model =
   }
 
 
-init : EI.DigitakStorageVersions -> Model
-init versions =
+init : EI.Instrument -> EI.ProjectSpec -> Model
+init instrument projectSpec =
   let
-    project = DT.emptyProject versions
+    project = DT.emptyProject instrument.device projectSpec
     selection = Sel.initSelection
   in
-    { versions = versions
+    { instrument = instrument
+    , projectSpec = projectSpec
     , project = project
     , projectName = "DT Project"
+    , extraFileNames = Dict.empty
     , pendingReceive = NothingPending
     , aboutToWriteFile = False
     , selection = selection
     , nameEditing = False
+    , samplePoolOffset = 0
     , related = DT.noRelations
     , importing = Nothing
     , alert = Alert.noAlert
@@ -95,6 +104,7 @@ type Msg
   | ClearProject
   | RequestProject Disposition
   | ReceiveDump SysEx.Dump.ElkDump
+  | ReceiveSampleFileInfo ElkMessage
   | SendProject
 
   | StartWriteProjectFile
@@ -118,6 +128,8 @@ type Msg
 
   | SelectionItemMsg Kind Int Sel.Msg
   | SelectionGlobalMsg Sel.Msg
+
+  | SetSamplePoolOffset Int
 
   | ChangeItemName Kind Int String
   | KeyDown Kind String

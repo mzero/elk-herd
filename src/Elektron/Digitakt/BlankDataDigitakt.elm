@@ -1,4 +1,4 @@
-module Elektron.Digitakt.BlankData exposing (..)
+module Elektron.Digitakt.BlankDataDigitakt exposing (..)
 
 {-| The compressed copies of blank patternKits, and empty projectSettings
 for every version of Digitakt OS supported.

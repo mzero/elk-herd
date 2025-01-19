@@ -68,10 +68,9 @@ mainView : Page -> Model -> Html.Html Msg
 mainView page model =
   let
     hasProjectPage =
-      case SysEx.Connect.instrument model.connectModel
-          |> Maybe.andThen Elektron.Instrument.digitaktStorageVersions of
-        Just _ -> True
-        Nothing -> False
+      SysEx.Connect.instrument model.connectModel
+        |> Maybe.map Elektron.Instrument.hasProjects
+        |> Maybe.withDefault False
 
     pageContent =
       case page of

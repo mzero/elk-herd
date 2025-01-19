@@ -13,7 +13,6 @@ import Elektron.Struct as ST
 import SysEx.Internal exposing (..)
 import Elektron.Instrument exposing (Device)
 import Elektron.Struct.Part as Part
-import Html.Attributes exposing (default)
 
 
 

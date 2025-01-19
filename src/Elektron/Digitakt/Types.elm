@@ -9,6 +9,9 @@ module Elektron.Digitakt.Types exposing
   , Sample
   , Sound
 
+  , sampleHashSize
+  , updateSampleName
+
   , PLock
   , PLocks
   , plockFromMaybe
@@ -35,7 +38,7 @@ import Dict
 import Bank exposing (Index(..))
 import Elektron.Digitakt.Dump as Dump
 import Elektron.Drive as Drive
-import Elektron.Path as Path
+
 
 {-| While `Bank` allows for entries to be actually empty (the slot returns
 `Nothing`), in practice, that isn't how the instrument works. The pattern
@@ -106,6 +109,7 @@ type alias Pattern =
 type alias Sample =
   { name : String       -- cached from +Drive
   , status : Status
+  , needsName : Bool
 
   , binary : Dump.Sample
   }
@@ -117,6 +121,21 @@ type alias Sound =
 
   , binary : Dump.Sound
   }
+
+
+sampleHashSize : Sample -> Drive.HashSize
+sampleHashSize s = Drive.hashSize s.binary.hash (Dump.sampleLength s.binary)
+
+updateSampleName : Drive.FileNamesByHash -> Sample -> Sample
+updateSampleName names s =
+  if s.needsName
+    then
+      case Dict.get (sampleHashSize s) names of
+        Just name -> { s | name = name, needsName = False }
+        _         -> s
+    else
+      s
+
 
 {- These high-level versions of `PLock` ensure that the value is indexing the
 correct `Bank` by using `Index a`.
@@ -154,14 +173,13 @@ buildPatternFromDump dPatternKit =
     name = Dump.patternKitName dPatternKit
 
     trackSounds = Array.map buildSoundFromDump dPatternKit.kit.sounds
-    aSound = Array.get 0 dPatternKit.kit.sounds
 
     buildSoundPLocksFromDump : Dump.Track -> SoundPLocks
     buildSoundPLocksFromDump = Array.map plockFromMaybe << Dump.trackSoundPLocks
 
     buildSamplePlocksFromDump : Dump.PLock -> Maybe SamplePLocks
     buildSamplePlocksFromDump =
-      Maybe.map (Array.map plockFromMaybe) << Dump.plockSamplePLocks aSound
+      Maybe.map (Array.map plockFromMaybe) << Dump.plockSamplePLocks
 
     hasTrigs =
       List.any Dump.anyTrigsSet
@@ -201,21 +219,14 @@ buildPatternFromDump dPatternKit =
     , binary = dPatternKit
     }
 
-buildSampleFromDump : Drive.FilesByHash -> Dump.Sample -> Sample
-buildSampleFromDump filesByHash dSample =
+buildSampleFromDump : Dump.Sample -> Sample
+buildSampleFromDump dSample =
   let
     empty = Dump.isEmptySample dSample
-    hash = dSample.hash
-    length = Dump.sampleLength dSample
   in
-    { name =
-        if empty
-          then ""
-          else
-            case Dict.get (hash, length) filesByHash of
-              Just (p :: _) -> Path.baseName p
-              _ -> "???"
+    { name = if empty then "" else "???"
     , status = if empty then Empty else Live
+    , needsName = not empty
     , binary = dSample
     }
 

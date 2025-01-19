@@ -37,22 +37,19 @@ later = List.map (\m -> Task.perform (always m) <| Task.succeed ())
 prepForMain : Model -> (Model, Cmd Msg)
 prepForMain model0 =
   let
-    (hasSamples, dtVersions) =
-      case SysEx.Connect.instrument model0.connectModel of
-        Just inst -> (EI.hasDriveSamples inst, EI.digitaktStorageVersions inst)
-        Nothing -> (False, Nothing)
+    prepProjects inst model =
+      case inst.projectSpec of
+        Just spec -> { model | projectModel = Just <| Project.init inst spec }
+        Nothing -> model
 
-    model1 =
-      case dtVersions of
-        Just vers -> { model0 | projectModel = Just <| Project.init vers }
-        Nothing -> model0
-
-    (model2, cmd2) =
-      if hasSamples
-        then onSamplesUpdate (Samples.kickOff model1.samplesModel) model1
-        else (model1, Cmd.none)
+    prepSamples inst model =
+      if EI.hasDriveSamples inst
+        then onSamplesUpdate (Samples.kickOff model.samplesModel) model
+        else (model, Cmd.none)
   in
-    (model2, cmd2)
+    SysEx.Connect.instrument model0.connectModel
+    |> Maybe.map (\inst -> model0 |> prepProjects inst |> prepSamples inst)
+    |> Maybe.withDefault ( model0, Cmd.none )
 
 
 makeSysExRequests :

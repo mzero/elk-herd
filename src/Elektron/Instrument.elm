@@ -1,15 +1,17 @@
 module Elektron.Instrument exposing
   ( Device(..)
+  , productName
 
   , Instrument
-  , fromDeviceResponse
+  , fromDeviceResponse, updateFromVersionResponse
+
 
   , report
 
-  , hasDriveSamples
+  , hasDriveSamples, hasProjects
 
-  , DigitakStorageVersions
-  , digitaktStorageVersions
+  , ProjectSpec
+  , StorageVersions
   )
 
 
@@ -17,6 +19,14 @@ type Device
   = Digitakt
   | Digitakt2
   | Unknown
+
+
+productName : Device -> String
+productName d =
+  case d of
+    Digitakt  -> "Digitakt"
+    Digitakt2 -> "Digitakt2"
+    Unknown   -> "Unknown Device"
 
 
 {-| Information about an Elektron instrument that it provides in response to
@@ -37,6 +47,7 @@ type alias Instrument =
   , supportedMessages : List Int
   , build : String
   , version : String
+  , projectSpec : Maybe ProjectSpec
   }
 
 
@@ -46,10 +57,10 @@ fromDeviceResponse productId msgs deviceName =
     device =
       case productId of
         12 -> Digitakt
-        43 -> Digitakt2
+        42 -> Digitakt2
         _  -> Unknown
   in
-    Instrument productId device deviceName msgs "????" "?.??"
+    Instrument productId device deviceName msgs "????" "?.??" Nothing
 
 
 {-| This string is used when reporting the device to the stats server.
@@ -75,11 +86,42 @@ hasDriveSamples inst =
     , 0x21  -- itemRename
     ]
 
+hasProjects : Instrument -> Bool
+hasProjects inst = inst.projectSpec /= Nothing
 
-type alias DigitakStorageVersions =
-  { projectSettingsVersion : Int
-  , patternAndKitVersion : Int
+
+type alias ProjectSpec =
+  { storageVersions : StorageVersions
+  , numSampleSlots : Int
   }
+
+type alias StorageVersions =
+  { projectSettings : Int
+  , patternAndKit : Int
+  }
+
+
+updateFromVersionResponse : String -> String -> Instrument -> Instrument
+updateFromVersionResponse build version inst =
+  let
+    storageVersions = case inst.device of
+      Digitakt  -> findStorageVersions digitaktVersions inst
+      Digitakt2 -> findStorageVersions digitakt2Versions inst
+      _ -> Nothing
+
+    numSampleSlots = case inst.device of
+        Digitakt  -> Just  128
+        Digitakt2 -> Just 1024     -- see also same data in Elektron.Digitakt.Dump
+        _         -> Nothing
+    projectSpec = Maybe.map2 ProjectSpec storageVersions numSampleSlots
+  in
+    { inst | build = build, version = version, projectSpec = projectSpec}
+
+
+
+
+type alias VersionList = List (String, StorageVersions)
+
 
 {-| For a given build of a device, these are the versions of the structures that
 it uses. It can load older versions, but will always produce these versions.
@@ -88,25 +130,32 @@ The application sometimes needs "blank" versions of a project or a pattern.
 This table determines which versino of those structures are needed. See
 `Elektron.Digitakt.Blank` for the actual blank versions.
 -}
-digitaktVersions : List (String, DigitakStorageVersions)
+digitaktVersions : VersionList
   -- assoc list of build to versions
 digitaktVersions =
-  [ ({- 1.08   -} "0019", { projectSettingsVersion = 1, patternAndKitVersion = 2 })
-  , ({- 1.10   -} "0021", { projectSettingsVersion = 1, patternAndKitVersion = 2 })
-  , ({- 1.11b1 -} "0022", { projectSettingsVersion = 2, patternAndKitVersion = 3 })
-  , ({- 1.11b7 -} "0029", { projectSettingsVersion = 2, patternAndKitVersion = 4 })
-  , ({- 1.11   -} "0032", { projectSettingsVersion = 2, patternAndKitVersion = 4 })
-  , ({- 1.??   -} "0033", { projectSettingsVersion = 3, patternAndKitVersion = 4 })
-  , ({- 1.20   -} "0037", { projectSettingsVersion = 3, patternAndKitVersion = 5 })
-  , ({- 1.30   -} "0053", { projectSettingsVersion = 5, patternAndKitVersion = 6 })
-  , ({- 1.30B  -} "0064", { projectSettingsVersion = 5, patternAndKitVersion = 6 })
-  , ({- 1.40   -} "0070", { projectSettingsVersion = 6, patternAndKitVersion = 7 })
-  , ({- 1.40A  -} "0073", { projectSettingsVersion = 6, patternAndKitVersion = 7 })
-  , ({- 1.40B  -} "0077", { projectSettingsVersion = 6, patternAndKitVersion = 7 })
-  , ({- 1.50   -} "0084", { projectSettingsVersion = 7, patternAndKitVersion = 9 })
-  , ({- 1.51   -} "0088", { projectSettingsVersion = 7, patternAndKitVersion = 9 })
-  , ({- 1.51A  -} "0089", { projectSettingsVersion = 7, patternAndKitVersion = 9 })
-  , ({- 1.52   -} "0095", { projectSettingsVersion = 7, patternAndKitVersion = 9 })
+  [ ({- 1.08   -} "0019", { projectSettings = 1, patternAndKit = 2 })
+  , ({- 1.10   -} "0021", { projectSettings = 1, patternAndKit = 2 })
+  , ({- 1.11b1 -} "0022", { projectSettings = 2, patternAndKit = 3 })
+  , ({- 1.11b7 -} "0029", { projectSettings = 2, patternAndKit = 4 })
+  , ({- 1.11   -} "0032", { projectSettings = 2, patternAndKit = 4 })
+  , ({- 1.??   -} "0033", { projectSettings = 3, patternAndKit = 4 })
+  , ({- 1.20   -} "0037", { projectSettings = 3, patternAndKit = 5 })
+  , ({- 1.30   -} "0053", { projectSettings = 5, patternAndKit = 6 })
+  , ({- 1.30B  -} "0064", { projectSettings = 5, patternAndKit = 6 })
+  , ({- 1.40   -} "0070", { projectSettings = 6, patternAndKit = 7 })
+  , ({- 1.40A  -} "0073", { projectSettings = 6, patternAndKit = 7 })
+  , ({- 1.40B  -} "0077", { projectSettings = 6, patternAndKit = 7 })
+  , ({- 1.50   -} "0084", { projectSettings = 7, patternAndKit = 9 })
+  , ({- 1.51   -} "0088", { projectSettings = 7, patternAndKit = 9 })
+  , ({- 1.51A  -} "0089", { projectSettings = 7, patternAndKit = 9 })
+  , ({- 1.52   -} "0095", { projectSettings = 7, patternAndKit = 9 })
+  ]
+
+digitakt2Versions : VersionList
+  -- assoc list of build to versions
+digitakt2Versions =
+  [ ({- 1.02   -} "0035", { projectSettings = 0, patternAndKit = 0 })
+  , ({- 1.03A  -} "0041", { projectSettings = 0, patternAndKit = 0 })
   ]
 
 {-| Returns the versions for a given instrument by returning the last entry in
@@ -127,8 +176,8 @@ OS comes out.
 TODO: Get clarification from Elketron on the way version strings work,
 especially vis-a-vis storage structure settings.
 -}
-digitaktStorageVersions : Instrument -> Maybe DigitakStorageVersions
-digitaktStorageVersions inst =
+findStorageVersions : VersionList -> Instrument -> Maybe StorageVersions
+findStorageVersions vlist inst =
   let
     go dvs vers =
       case dvs of
@@ -138,6 +187,5 @@ digitaktStorageVersions inst =
             then vers
             else go rest (Just v)
   in
-    if inst.device == Digitakt
-      then go digitaktVersions Nothing
-      else Nothing
+    go vlist Nothing
+

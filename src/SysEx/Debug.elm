@@ -25,13 +25,15 @@ import Regex
 
 import Build
 import ByteArray
+import ByteArray.Compression as Compression
 import Commands as C
+import Elektron.Instrument as EI
 import Html.Aria as Aria
 import Missing.List as List
 import Missing.Regex as Regex
-import SysEx.Dump exposing (..)
-import SysEx.Message exposing (..)
-import SysEx.SysEx exposing (..)
+import SysEx.Dump as Dump exposing (ElkDump)
+import SysEx.Message as Message exposing (ElkMessage)
+import SysEx.SysEx as SysEx exposing (SysEx, Direction(..))
 import Util
 
 
@@ -40,14 +42,15 @@ type alias Model =
   , items : List (Direction, SysEx)
   , path : String
   , path2 : String
+  , device: EI.Device
   , hexDump : String
   , dumpIndex : String
   }
 
 init : Model
-init = Model False [] "/" "/" "" "0"
+init = Model False [] "/" "/" EI.Unknown "" "0"
 
-addItem : Direction -> SysEx -> Model -> Model
+addItem : SysEx.Direction -> SysEx -> Model -> Model
 addItem d s m =
   if Build.midiDebugger
     then { m | items = m.items ++ [(d, s)] }
@@ -69,7 +72,7 @@ decodeHex model =
         )
       |> ByteArray.fromList
   in
-    addItem Decoded (sysExFromBytes ba) { model | hexDump = "" }
+    addItem Decoded (SysEx.sysExFromBytes ba) { model | hexDump = "" }
 
 type Msg
  = HideDebug
@@ -83,6 +86,7 @@ type Msg
  | SendMessage ElkMessage
  | SendDirMsg (String -> ElkMessage)
  | SendDir2Msg (String -> String -> ElkMessage)
+ | SetDevice EI.Device
  | SendDumpRequest Int
  | SendSysEx SysEx
  | ProbeMessage Int
@@ -91,8 +95,8 @@ type Msg
 
 requests : List (String, ElkMessage)
 requests =
-  [ ("Device", DeviceRequest)
-  , ("Version", VersionRequest)
+  [ ("Device", Message.DeviceRequest)
+  , ("Version", Message.VersionRequest)
   ]
 
 possibleMsgs : List Int
@@ -100,22 +104,22 @@ possibleMsgs = [ 0x30 ]
 
 pathMsgs : List (String, String -> ElkMessage)
 pathMsgs =
-  [ ("ls", DirListRequest)
-  , ("mkdir", DirCreateRequest)
-  , ("rmdir", DirDeleteRequest)
-  , ("rm", FileDeleteRequest)
+  [ ("ls", Message.DirListRequest)
+  , ("mkdir", Message.DirCreateRequest)
+  , ("rmdir", Message.DirDeleteRequest)
+  , ("rm", Message.FileDeleteRequest)
   ]
 
 path2Msgs : List (String, String -> String -> ElkMessage)
 path2Msgs =
-  [ ("mv", ItemRenameRequest)
+  [ ("mv", Message.ItemRenameRequest)
   ]
 
 probeMessage : Int -> Model -> List ElkMessage
 probeMessage msg model =
   let
-    sxArg i = TestRequestArgs msg (ByteArray.fromArray <| Array.repeat i 0)
-    sxStr = TestRequestString msg model.path
+    sxArg i = Message.TestRequestArgs msg (ByteArray.fromArray <| Array.repeat i 0)
+    sxStr = Message.TestRequestString msg model.path
   in
     sxStr :: [ ]
           -- List.map sxArg <| List.range 0 8
@@ -134,11 +138,13 @@ update msg model = case msg of
   SendDirMsg msgFn -> (model, [], [msgFn model.path])
   SendDir2Msg msgFn -> (model, [], [msgFn model.path model.path2])
   SendMessage dt -> (model, [], [dt])
+  SetDevice dev -> ({ model | device = dev }, [], [])
   SendDumpRequest type_ ->
     let
       index = String.toInt model.dumpIndex |> Maybe.withDefault 0
-      sysEx = SysEx.Dump.Unknown type_ index ByteArray.empty
-    in (model, [ElektronDump sysEx], [])
+      sysEx = Dump.Unknown type_ index ByteArray.empty
+      dump = ElkDump model.device sysEx
+    in (model, [SysEx.ElektronDump dump], [])
   SendSysEx sx -> (model, [sx], [])
   ProbeMessage msg_ -> (model, [], probeMessage msg_ model)
   DecodeHex -> (decodeHex model, [], [])
@@ -158,6 +164,18 @@ commands =
 
 viewItem : (Direction, SysEx) -> Html.Html msg
 viewItem (d, sx) =
+  let
+    extraView =
+      case sx of
+        SysEx.ElektronDump ed ->
+          case ed.message of
+            Dump.Unknown _ _ ba ->
+              [ Html.div [ Attr.class "hexdump" ]
+                [ Html.text <| ByteArray.elmIntList <| Compression.compress ba ]
+              ]
+            _ -> [ ]
+        _ -> [ ]
+  in
     Html.div
       [ Attr.classList
         [ ("sysex-item", True)
@@ -165,7 +183,7 @@ viewItem (d, sx) =
         , ("sysex-received", d == Received)
         ]
       ]
-      <| List.map (Html.map never) <| viewSysEx sx
+      <| List.map (Html.map never) <| (SysEx.viewSysEx sx ++ extraView)
 
 view : Model -> Html.Html Msg
 view model = if not Build.midiDebugger then Html.div [] [] else
@@ -276,6 +294,7 @@ view model = if not Build.midiDebugger then Html.div [] [] else
         ]
         (
           Html.span [ Attr.class "input-group-addon" ] [ Html.text "Dump:" ]
+          :: devices
           :: Html.textarea [ Attr.value model.dumpIndex, Attr.tabindex 300, Attr.rows 1, Events.onInput SetDumpIndex ] [ ]
           :: List.map dumpBtn
             [ ("patKit", 0x60)
@@ -287,6 +306,28 @@ view model = if not Build.midiDebugger then Html.div [] [] else
             ]
         )
 
+    deviceItem d =
+      Html.a
+        [ Attr.class "dropdown-item"
+        , Attr.href "#"
+        , Events.onClick <| SetDevice d
+        ]
+        [ Html.text <| EI.productName d]
+
+    devices =
+      Html.div [ Attr.class "dropdown" ]
+        [ Html.button
+          [ Attr.class "btn btn-outline-secondary dropdown-toggle"
+          , Attr.attribute "data-toggle" "dropdown"
+          , Attr.type_ "button"
+          , Attr.id "device-picker"
+          , Aria.hasPopUp True
+          , Aria.expanded False
+          ]
+          [ Html.text (EI.productName model.device) ]
+        , Html.div [ Attr.class "dropdown-menu", Aria.labeledBy "device-picker" ]
+          <| List.map deviceItem [ EI.Digitakt, EI.Digitakt2, EI.Unknown ]
+        ]
   in
     Html.div [ Attr.id "midi-debug" ]
       [ Html.div

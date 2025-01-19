@@ -118,6 +118,15 @@ kitStorage_midiParams v =
     _ -> Nothing
 
 
+kitStorage_midiMask : Version -> Maybe Int
+kitStorage_midiMask v =
+  case (v.device, v.int) of
+    (Digitakt2, 0) -> Just 9296
+    (Digitakt2, 1) -> Just 9936
+    (Digitakt2, 2) -> Just 9936
+    _ -> Nothing
+
+
 kitStorage_sizeof : Version -> Maybe Int
 kitStorage_sizeof v =
   case (v.device, v.int) of

@@ -46,7 +46,7 @@ slotLabel k i =
         KSample -> sampleSlotLabels
         KSound -> soundSlotLabels
   in
-    Array.get i labelSet |> Maybe.withDefault "???"
+    Array.get (modBy 128 i) labelSet |> Maybe.withDefault "???"
 
 
 isRelated : Kind -> Int -> DT.Related -> Bool

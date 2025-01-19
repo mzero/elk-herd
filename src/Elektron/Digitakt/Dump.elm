@@ -71,7 +71,6 @@ import Elektron.Struct as ST
 import Elektron.Struct.Part as Part exposing (Part)
 import Elektron.Struct.Version as Version exposing (Version, VersionSpec(..))
 import Missing.Maybe as Maybe
-import Html exposing (main_)
 
 
 {- Structure names follow Elektron's header files names for these structures.
@@ -162,6 +161,14 @@ numSteps v =
       Digitakt  -> Just  64
       Digitakt2 -> Just 128
       _         -> Nothing
+
+numSampleSlots : Version -> Maybe Int
+numSampleSlots v =
+  case v.device of
+      Digitakt  -> Just  128
+      Digitakt2 -> Just 1024
+      _         -> Nothing
+
 
 --
 -- PATTERN
@@ -291,16 +298,15 @@ soundPlocksPart : Version -> Part (Array Int)
 soundPlocksPart v =
   CppStructs.trackStorage_soundSlotLocks v
   |> Maybe.andThen      (\_ -> numSteps v)
-  |> Maybe.map          (\n -> Part.array n Part.uint8)
+  |> Maybe.map          (\n -> Part.arrayHex n Part.uint8)
   |> Maybe.withDefault  (Part.ephemeral Array.empty)
 
 
 stepsPart : Version -> Part (Array Int)
 stepsPart v =
   numSteps v
-  |> Maybe.map          (\n -> Part.array n Part.uint16be)
+  |> Maybe.map          (\n -> Part.arrayHex n Part.uint16be)
   |> Maybe.withDefault  (Part.fail "unknown device")
-  -- we don't bother to store this as Part.array n Part.uint16be
 
 
 anyTrigsSet : Track -> Bool
@@ -354,32 +360,42 @@ structPLock =
     |> ST.fieldV  .steps      "steps"     stepsPart
     |> ST.build "PLock"
 
-plockSamplePLocks : Maybe Sound -> PLock -> Maybe (Array (Maybe Int))
-plockSamplePLocks sound plock =
+plockSamplePLocks : PLock -> Maybe (Array (Maybe Int))
+plockSamplePLocks plock =
   let
-    step v =
-      if Bitwise.and 0xff00 v == 0xff00
-        then Nothing
-        else Just <| Bitwise.shiftRightBy 8 v
-    isSamplePlock = sound
-      |> Maybe.andThen (.version >> CppStructs.soundParameters_sampleParamId)
+    decodeStep =
+      case plock.version.device of
+        Digitakt ->
+          \v ->
+            if Bitwise.and 0xff00 v == 0xff00
+              then Nothing
+              else Just <| Bitwise.shiftRightBy 8 v
+        Digitakt2 -> \v -> if v == 0xffff then Nothing else Just v
+        _ -> always Nothing
+    isSamplePlock =
+      CppStructs.soundParameters_sampleParamId plock.version
       |> Maybe.map (\n -> n == plock.paramId)
       |> Maybe.withDefault False
   in
     if isSamplePlock
-      then Just <| Array.map step plock.steps
+      then Just <| Array.map decodeStep plock.steps
       else Nothing
 
 setPlockSamplePlocks : Maybe (Array (Maybe Int)) -> PLock -> PLock
 setPlockSamplePlocks mSteps plock =
   let
-    step mv =
-      case mv of
-          Nothing -> 0xff00
-          Just v -> Bitwise.shiftLeftBy 8 v
+    encodeStep =
+      case plock.version.device of
+        Digitakt ->
+          \mv ->
+            case mv of
+                Nothing -> 0xff00
+                Just v -> Bitwise.shiftLeftBy 8 v
+        Digitakt2 -> Maybe.withDefault 0xffff
+        _ -> always 0xffff
   in
     case mSteps of
-      Just steps -> { plock | steps = Array.map step steps }
+      Just steps -> { plock | steps = Array.map encodeStep steps }
       Nothing -> plock
 
 
@@ -390,26 +406,46 @@ setPlockSamplePlocks mSteps plock =
 --
 
 type alias Kit =
-  { version:      Version
+  { magicHead:    Maybe Int
+  , version:      Version
   , name:         String
   ,   skip1:         ByteArray
   , sounds:       Array Sound         -- 8 x
   ,   skip2:         ByteArray
   , midiSetup:    Array MidiSetup     -- 8 x
   ,   skip3:         ByteArray
+  , midiMask:     Maybe Int
+  ,   skip4:         ByteArray
   }
 
 structKit : StorageStruct Kit
 structKit =
   ST.struct Kit
+    |> ST.field   .magicHead    "magicHead"   (Part.optional Part.magicHead)
     |> ST.version .version      "version"     Version.uint32be
     |> ST.field   .name         "name"        (Part.chars 16)
     |> ST.skipTo  .skip1                      CppStructs.kitStorage_trackSounds
     |> ST.fieldV  .sounds       "sounds"      (subStructArray kitVersionToSounds structSound)
     |> ST.skipTo  .skip2                      CppStructs.kitStorage_midiParams
     |> ST.fieldV  .midiSetup    "midiSetup"   (subStructArray kitVersionToMidiSetups structMidiSetup)
-    |> ST.skipTo  .skip3                      CppStructs.kitStorage_sizeof
+    |> ST.skipToOrOmit
+                  .skip3                      CppStructs.kitStorage_midiMask
+    |> ST.fieldV  .midiMask     "midiMask"    midiMaskPart
+    |> ST.skipTo  .skip4                      CppStructs.kitStorage_sizeof
     |> ST.build "Kit"
+
+{- NB: the magic header is optional because it exists in DT2 structures, but
+not DT1. The right thing to do would be to choose between parsing it, or
+making it ephemeral based on the device.
+
+However, since this field becomes BEFORE the version, we don't yet have a full
+version at parse time. We do have the device from the version spec... but we
+don't have the Struct machinery to get it there.
+
+For now, since the magic value will never be a valid version, the hack is to
+parse the version if we can, and if not, assume it isn't present.
+-}
+
 
 kitVersionToSounds : List SubStructArrayMap
 kitVersionToSounds =
@@ -447,6 +483,13 @@ kitVersionToMidiSetups =
   , { device = Digitakt2, parent = 2, child = 1, n = 16 }
   ]
 
+midiMaskPart : Version -> Part (Maybe Int)
+midiMaskPart v =
+  CppStructs.kitStorage_midiMask v
+  |> Maybe.map          (\_ -> Part.uint16be |> Part.map Just (Maybe.withDefault 0))
+  |> Maybe.withDefault  (Part.ephemeral Nothing)
+
+
 
 setKitName : String -> Kit -> Kit
 setKitName s kit = { kit | name = s }
@@ -467,6 +510,7 @@ isDefaultKit : Kit -> Bool
 isDefaultKit kit =
   let
     slots = Array.toIndexedList <| Array.map soundSampleSlot kit.sounds
+    isDigitakt = kit.version.device == Digitakt
     allZero = List.all (\(i, s) -> s == 0)
       -- older cleared kits had the slots all set to 0
     allDefault = List.all (\(i, s) -> s == (i + 1))
@@ -476,8 +520,13 @@ isDefaultKit kit =
       -- up with a permutation of 1..8 and zeros for deleted samples
     allDisabled =
       List.all (not << midiTrackEnabled) <| Array.toList kit.midiSetup
+    noMidiMachines = Maybe.map ((==) 0) kit.midiMask |> Maybe.withDefault True
   in
-    (allZero slots || allDefault slots || allSmall slots) && allDisabled
+    (allDefault slots
+    || (isDigitakt && (allSmall slots || allZero slots))
+    )
+    && allDisabled
+    && noMidiMachines
 
 
 -- currently we consider just the sample slot settings of the eight tracks
@@ -508,11 +557,17 @@ structSound =
     |> ST.field   .tagMask      "tagMask"     Part.uint32be
     |> ST.field   .name         "name"        (Part.chars 16)
     |> ST.skipTo  .skip1                      CppStructs.soundStorage_sampleSlot
-    |> ST.field   .sampleSlot   "sampleSlot"  Part.uint8
+    |> ST.fieldV  .sampleSlot   "sampleSlot"  sampleSlotPart
     |> ST.skipTo  .skip2                      CppStructs.soundStorage_sampleFile
     |> ST.field   .sample       "sample"      structSample
     |> ST.skipTo  .skip3                      CppStructs.soundStorage_sizeof
     |> ST.build "Sound"
+
+sampleSlotPart : Version -> Part Int
+sampleSlotPart v =
+  case numSampleSlots v of
+    Just n  -> if n > 128 then Part.uint16be else Part.uint8
+    _       -> Part.fail "unknown sample pool size"
 
 sameSound : Sound -> Sound -> Bool
 sameSound a b =
@@ -552,7 +607,8 @@ setSoundSampleSlot i sound = { sound | sampleSlot = i }
 -- once there is more than just V0, this will need to be represented.
 
 type alias MidiSetup =
-  { version:      Version
+  { magicHead:    Maybe Int
+  , version:      Version
   ,   skip1:        ByteArray
   , enableMask:   Int
   ,   skip2:        ByteArray
@@ -561,6 +617,7 @@ type alias MidiSetup =
 structMidiSetup : StorageStruct MidiSetup
 structMidiSetup =
   ST.struct MidiSetup
+    |> ST.field   .magicHead    "magicHead"   (Part.optional Part.magicHead)
     |> ST.version .version      "version"     Version.uint32be
     |> ST.skipTo  .skip1                      CppStructs.midiSetupStorage_enableMask
     |> ST.field   .enableMask   "enableMask"  Part.uint16be
@@ -596,10 +653,9 @@ structProjectSettings =
 
 sampleBankPart : Version -> Part (Array Sample)
 sampleBankPart v =
-  case v.device of
-    Digitakt  -> Part.array  128 structSample
-    Digitakt2 -> Part.array 1024 structSample
-    _         -> Part.fail "unknown device"
+  case numSampleSlots v of
+    Just n -> Part.array n structSample
+    _      -> Part.fail "unknown sample pool size"
 
 
 --
