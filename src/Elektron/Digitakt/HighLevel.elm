@@ -146,7 +146,8 @@ updateProjectSound i dump proj =
 updateProject : Drive -> Dump.ProjectSettings -> Project -> Project
 updateProject drive dump proj =
   let
-    filesByHash = Dict.union (Drive.filesByHash drive) FactorySamples.filesByHash
+    fileNames =
+      Dict.union (Drive.fileNamesByHash drive) FactorySamples.fileNamesByHash
   in
     enlivenPhantoms
     <| rebuildCrossReference
@@ -154,7 +155,7 @@ updateProject drive dump proj =
       | samplePool =
           Bank.fromArray
           <| Array.map
-              (T.buildSampleFromDump filesByHash >> Just)
+              (T.buildSampleFromDump fileNames >> Just)
               dump.samples
       , binary = Just dump
       }

@@ -1,5 +1,5 @@
 module Elektron.Digitakt.FactorySamples exposing
-  ( filesByHash
+  ( fileNamesByHash
   )
 
 {-| Factory sample list.
@@ -23,20 +23,15 @@ and hashes.
 import Dict
 
 import Elektron.Drive as Drive
-import Elektron.Path as Path exposing (Path)
 
 
-
-mkPath : String -> Path
-mkPath = List.reverse << List.filter (not << String.isEmpty) << String.split "/"
-
-filesByHash : Drive.FilesByHash
-filesByHash =
+fileNamesByHash : Drive.FileNamesByHash
+fileNamesByHash =
   let
-    item dirPath { hash, size, name }
-      = ((hash, size), [Path.subPath dirPath name])
+    item { hash, size, name }
+      = (Drive.hashSize hash size, name)
 
-    items (dir, infos) = List.map (item <| mkPath dir) infos
+    items (_, infos) = List.map item infos
 
     allItems = List.concatMap items rawSampleData
   in

@@ -35,7 +35,7 @@ import Dict
 import Bank exposing (Index(..))
 import Elektron.Digitakt.Dump as Dump
 import Elektron.Drive as Drive
-import Elektron.Path as Path
+
 
 {-| While `Bank` allows for entries to be actually empty (the slot returns
 `Nothing`), in practice, that isn't how the instrument works. The pattern
@@ -200,20 +200,22 @@ buildPatternFromDump dPatternKit =
     , binary = dPatternKit
     }
 
-buildSampleFromDump : Drive.FilesByHash -> Dump.Sample -> Sample
-buildSampleFromDump filesByHash dSample =
+buildSampleFromDump : Drive.FileNamesByHash -> Dump.Sample -> Sample
+buildSampleFromDump fileNames dSample =
   let
     empty = Dump.isEmptySample dSample
     hash = dSample.hash
     length = Dump.sampleLength dSample
-  in
-    { name =
+    name =
         if empty
           then ""
           else
-            case Dict.get (hash, length) filesByHash of
-              Just (p :: _) -> Path.baseName p
+            case Dict.get (Drive.hashSize hash length) fileNames of
+              Just fileName -> fileName
               _ -> "???"
+
+  in
+    { name = name
     , status = if empty then Empty else Live
     , binary = dSample
     }

@@ -6,8 +6,10 @@ module Elektron.Drive exposing
   , getEntry
   , contentEntriesDepthFirst
 
-  , FilesByHash
-  , filesByHash
+  , HashSize
+  , hashSize
+  , FileNamesByHash
+  , fileNamesByHash
   , collisions
 
   , Stats
@@ -128,11 +130,9 @@ contentEntriesDepthFirst path drive =
     getEntry path drive |> Maybe.map subs |> Maybe.withDefault []
 
 
-{-| This is a mirror of the mechanism by which sample slots are connected to
+{- This is a mirror of the mechanism by which sample slots are connected to
 sample files. elk-herd needs it to be able to display the names of the samples
 in the sample pool.
-
-The key, `(Int, Int)` is (hash, size).
 
 The value is a `List Path` because someone could have uploaded a sample more
 than once into the +Drive and the same hash & size would appear at multiple
@@ -141,8 +141,16 @@ places in the tree.
 TODO: Make a type alias for Hash, or perhaps a wrapped type, so that the order
 here can't get confused.
 -}
-type alias FilesByHash = Dict.Dict (Int, Int) (List Path)
-  -- key is (hash, size)
+
+type alias HashSize = (Int, Int)
+  -- NB: In most of the Elektron API & structures it is hash, size.
+  -- BUT, in some it is size, hash. I'd use `type Hash = Hash Int`, but then
+  -- it can't be used in a Dict key. 
+
+hashSize : Int -> Int -> HashSize
+hashSize h s = (h, s)
+
+type alias FilesByHash = Dict.Dict HashSize (List Path)
 
 filesByHash : Drive -> FilesByHash
 filesByHash (Drive entry0) =
@@ -156,7 +164,21 @@ filesByHash (Drive entry0) =
   in
     add_entry entry0 Dict.empty
 
-collisions : Drive -> List ((Int, Int), (List Path))
+
+type alias FileNamesByHash = Dict.Dict HashSize String
+
+fileNamesByHash : Drive -> FileNamesByHash
+fileNamesByHash drive =
+  let
+    extractName _ paths =
+      case paths of
+        (path :: _) -> Path.baseName path
+        [ ]         -> "???"  -- never happens
+  in
+  filesByHash drive |> Dict.map extractName
+
+
+collisions : Drive -> List (HashSize, (List Path))
 collisions =
     Dict.toList << Dict.filter (\_ ps -> List.length ps > 1) << filesByHash
 
