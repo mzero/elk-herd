@@ -193,9 +193,14 @@ bankSelector model k =
         itemStatus i = Sel.itemStatus k i model.selection model.related
         empty = List.all itemEmpty range
         status = List.foldl (\i b -> if b == Sel.Plain then itemStatus i else b) Sel.Plain range
+
+        onDragEvents =
+          if Sel.kindStatus k model.selection == Sel.Dragged
+            then [Events.onMouseEnter (SetSamplePoolOffset start)]
+            else []
       in
         Html.button
-          [ Attr.class "btn btn-light btn-sm"
+          ([ Attr.class "btn btn-light btn-sm"
           , Attr.classList
               [ ("active", (model.samplePoolOffset == start))
               , ("empty", empty)
@@ -207,6 +212,8 @@ bankSelector model k =
           , Attr.disabled False
           , Events.onClick (SetSamplePoolOffset start)
           ]
+          ++ onDragEvents
+          )
           [ Html.text <| String.slice n (n + 1) "ABCDEFGHI" ]
   in
   case k of
