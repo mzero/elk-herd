@@ -18,12 +18,14 @@ module Project.Base exposing
   , itemName
   )
 
+import Dict
 import Json.Decode as D
 
 import Alert
 import ByteArray exposing (ByteArray)
 import Elektron.Digitakt.HighLevel as DT
 import Elektron.Digitakt.Related as DT
+import Elektron.Drive as Drive
 import Elektron.Instrument as EI
 import Job
 import Missing.Time as Time
@@ -54,6 +56,7 @@ type alias Model =
   , projectSpec : EI.ProjectSpec
   , project : DT.Project
   , projectName : String
+  , extraFileNames : Drive.FileNamesByHash
   , pendingReceive : PendingReceive
   , aboutToWriteFile : Bool
   , selection : Sel.Selection
@@ -77,6 +80,7 @@ init instrument projectSpec =
     , projectSpec = projectSpec
     , project = project
     , projectName = "DT Project"
+    , extraFileNames = Dict.empty
     , pendingReceive = NothingPending
     , aboutToWriteFile = False
     , selection = selection

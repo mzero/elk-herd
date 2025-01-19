@@ -145,7 +145,8 @@ validateProject :
   String -> String -> Drive -> DT.Project -> PendingReceive -> Model -> Update
 validateProject verb origin drive project0 pr model =
   let
-    project = DT.updateSampleNames (Drive.fileNamesByHash drive) project0
+    knownNames = Dict.union (Drive.fileNamesByHash drive) model.extraFileNames
+    project = DT.updateSampleNames knownNames project0
     (userMessage, ok) = DT.validateProject project
     action = verb ++ " " ++ origin
 
@@ -225,9 +226,15 @@ receiveSampleFileInfo msg model =
               case String.split "/" path |> List.reverse of
                 [] -> "/"
                 (n :: _) -> n
-            dict = Dict.singleton (Drive.hashSize hash size) name
+            hashSize = Drive.hashSize hash size
+            justOne = Dict.singleton hashSize name
+            extraFileNames = Dict.insert hashSize name model.extraFileNames
           in
-          returnM { model | project = DT.updateSampleNames dict model.project }
+          returnM
+            { model
+            | project = DT.updateSampleNames justOne model.project
+            , extraFileNames = extraFileNames
+            }
         else
           returnM model
     _ -> returnM model
