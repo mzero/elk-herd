@@ -33,6 +33,7 @@ import Project.Selection.Project as Sel
 import Project.Util exposing (..)
 import SysEx.Client
 import SysEx.Dump
+import SysEx.Message exposing (ElkMessage)
 import Undo
 
 {-| What to do with a project after we've received Import.
@@ -99,6 +100,7 @@ type Msg
   | ClearProject
   | RequestProject Disposition
   | ReceiveDump SysEx.Dump.ElkDump
+  | ReceiveSampleFileInfo ElkMessage
   | SendProject
 
   | StartWriteProjectFile

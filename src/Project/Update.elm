@@ -3,6 +3,7 @@ module Project.Update exposing
   , subscriptions
   )
 
+import Dict
 import Process
 import Task
 
@@ -14,7 +15,7 @@ import Elektron.Digitakt.HighLevel as DT
 import Elektron.Digitakt.Related as DT
 import Elektron.Digitakt.Verify as DT
 import Elektron.Digitakt.Types as DT
-import Elektron.Drive exposing (Drive)
+import Elektron.Drive as Drive exposing (Drive)
 import Job exposing (Job, Step(..))
 import Missing.Time as Time
 import Progress
@@ -25,6 +26,7 @@ import Project.Util exposing (..)
 import Portage
 import SysEx.Client exposing (..)
 import SysEx.Dump as Dump
+import SysEx.Message as Message
 import SysEx.SysEx
 import Undo
 
@@ -140,9 +142,10 @@ updateSelection selFn model =
       Just dropInfo -> processDrop dropInfo model
 
 validateProject :
-  String -> String -> DT.Project -> PendingReceive -> Model -> Update
-validateProject verb origin project pr model =
+  String -> String -> Drive -> DT.Project -> PendingReceive -> Model -> Update
+validateProject verb origin drive project0 pr model =
   let
+    project = DT.updateSampleNames (Drive.fileNamesByHash drive) project0
     (userMessage, ok) = DT.validateProject project
     action = verb ++ " " ++ origin
 
@@ -160,6 +163,18 @@ validateProject verb origin project pr model =
         FromDevice disp _ -> dispFn disp
         FromFile LoadProject name -> nameFn name >> dispFn LoadProject
         FromFile StartImport _  -> dispFn StartImport
+
+    getSampleNames m =
+      if ok
+        then returnMR m
+          (DT.neededSampleNames project
+          |> List.map (\(hash, size) ->
+            RequestMessage
+            (Message.SampleFileInfoRequest hash size)
+              -- yes, backwards from normal!
+            ReceiveSampleFileInfo
+          ))
+        else returnM m
 
     model_ =
       if ok
@@ -196,7 +211,26 @@ validateProject verb origin project pr model =
         msgs -> thenUpdate <| showAlert (alert (String.join "\n\n" msgs))
 
   in
-    returnM model_ |> postUpdate
+    returnM model_ |> thenUpdate getSampleNames |> postUpdate
+
+
+receiveSampleFileInfo : Message.ElkMessage -> Model -> Update
+receiveSampleFileInfo msg model =
+  case msg of
+    (Message.SampleFileInfoResponse ok size hash path) ->
+      if ok
+        then
+          let
+            name =
+              case String.split "/" path |> List.reverse of
+                [] -> "/"
+                (n :: _) -> n
+            dict = Dict.singleton (Drive.hashSize hash size) name
+          in
+          returnM { model | project = DT.updateSampleNames dict model.project }
+        else
+          returnM model
+    _ -> returnM model
 
 
 startEdit : Model -> Update
@@ -234,7 +268,7 @@ receiveDump dump drive model =
     allDone pfn m =
       case m.pendingReceive of
         FromDevice disp p ->
-          validateProject "Fetch" "from Digitakt" p m.pendingReceive
+          validateProject "Fetch" "from Digitakt" drive p m.pendingReceive
             { m
             | pendingReceive = NothingPending
             , progress = pfn m.progress
@@ -254,7 +288,7 @@ receiveDump dump drive model =
   in
     case model.pendingReceive of
       FromDevice disp project ->
-        case DT.updateFromDump drive dump project of
+        case DT.updateFromDump dump project of
           Ok p -> step { model | pendingReceive = FromDevice disp p }
           Err error -> alert error model
       _ -> finished model
@@ -304,8 +338,8 @@ writeSysExJob fileName project =
       |> Job.map (Portage.writeBinaryFile fileName "application/octet-stream")
     )
 
-readSysExJob : DT.Project -> Drive -> ByteArray -> Job (Int, Int) (Result String DT.Project)
-readSysExJob emptyProject drive allBytes =
+readSysExJob : DT.Project -> ByteArray -> Job (Int, Int) (Result String DT.Project)
+readSysExJob emptyProject allBytes =
   let
     n = ByteArray.length allBytes
     p b = (n - ByteArray.length b, n)
@@ -316,7 +350,7 @@ readSysExJob emptyProject drive allBytes =
         else
           case SysEx.SysEx.readNextSysEx bytes of
             Ok (dump, rest) ->
-              case DT.updateFromSysEx drive dump project of
+              case DT.updateFromSysEx dump project of
                 Ok proj_ -> NextStep (p rest) (\_ -> step rest proj_)
                 Err error -> Complete (Err error)
             Err error -> Complete (Err error)
@@ -365,6 +399,9 @@ update msg drive model =
 
     ReceiveDump dump ->
       receiveDump dump drive model
+
+    ReceiveSampleFileInfo info ->
+      receiveSampleFileInfo info model
 
     SendProject ->
       let
@@ -416,13 +453,13 @@ update msg drive model =
         finish result =
           case result of
             Ok p ->
-              validateProject "Open" "Project File" p model.pendingReceive
+              validateProject "Open" "Project File" drive p model.pendingReceive
             Err message ->
               showAlert
               <| Alert.alert Alert.Danger "Error reading project:" message
 
         emptyProject = makeEmptyProject model
-        job = readSysExJob emptyProject drive byteContents |> Job.map finish
+        job = readSysExJob emptyProject byteContents |> Job.map finish
         model_ =
           { model
           | pendingReceive = NothingPending

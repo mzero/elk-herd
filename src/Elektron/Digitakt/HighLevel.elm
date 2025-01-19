@@ -8,6 +8,9 @@ module Elektron.Digitakt.HighLevel exposing
   , updateFromDump
   , updateFromSysEx
 
+  , neededSampleNames
+  , updateSampleNames
+
   , toSysExDumpsForFile
   , toSysExDumpsForSend
 
@@ -33,15 +36,13 @@ banks of patterns, samples, and sounds), and renaming.
 -}
 
 import Array exposing (Array)
-import Dict
 
 import Bank exposing (BankOf, Index(..), Shuffle)
 import Elektron.Digitakt.Dump as Dump
 import Elektron.Digitakt.Blank as Blank
-import Elektron.Digitakt.FactorySamples as FactorySamples
 import Elektron.Digitakt.Related as Rel
 import Elektron.Digitakt.Types as T exposing (BankItem, Pattern, Sample, Sound)
-import Elektron.Drive as Drive exposing (Drive)
+import Elektron.Drive as Drive
 import Elektron.Instrument as EI
 import Elektron.Struct.Version exposing (Version)
 import Missing.Maybe as Maybe
@@ -143,22 +144,16 @@ updateProjectSound i dump proj =
   | soundPool = Bank.put (Index i) (T.buildSoundFromDump dump) proj.soundPool
   }
 
-updateProject : Drive -> Dump.ProjectSettings -> Project -> Project
-updateProject drive dump proj =
-  let
-    fileNames =
-      Dict.union (Drive.fileNamesByHash drive) FactorySamples.fileNamesByHash
-  in
-    enlivenPhantoms
-    <| rebuildCrossReference
-      { proj
-      | samplePool =
-          Bank.fromArray
-          <| Array.map
-              (T.buildSampleFromDump fileNames >> Just)
-              dump.samples
-      , binary = Just dump
-      }
+updateProject : Dump.ProjectSettings -> Project -> Project
+updateProject dump proj =
+  enlivenPhantoms
+  <| rebuildCrossReference
+    { proj
+    | samplePool =
+        Bank.fromArray
+        <| Array.map (T.buildSampleFromDump >> Just) dump.samples
+    , binary = Just dump
+    }
 
 
 
@@ -205,19 +200,39 @@ enlivenPhantoms proj =
 
 {- SysEx Dumps -}
 
-updateFromDump : Drive -> SysEx.Dump.ElkDump -> Project -> Result String Project
-updateFromDump drive dump project =
+updateFromDump : SysEx.Dump.ElkDump -> Project -> Result String Project
+updateFromDump dump project =
   case dump.message of
     SysEx.Dump.DTPatternKitResponse i dPattern -> Ok <| updateProjectPattern i dPattern project
     SysEx.Dump.DTSoundResponse i dSound -> Ok <| updateProjectSound i dSound project
-    SysEx.Dump.DTProjectSettingsResponse dProject -> Ok <| updateProject drive dProject project
+    SysEx.Dump.DTProjectSettingsResponse dProject -> Ok <| updateProject dProject project
     _ -> Err "An unexpected dump type was received."
 
-updateFromSysEx : Drive -> SysEx -> Project -> Result String Project
-updateFromSysEx drive sysEx project =
+updateFromSysEx : SysEx -> Project -> Result String Project
+updateFromSysEx sysEx project =
     case sysEx of
-      SysEx.SysEx.ElektronDump dump -> updateFromDump drive dump project
+      SysEx.SysEx.ElektronDump dump -> updateFromDump dump project
       _ -> Err "Something other than dump SysEx was received."
+
+
+neededSampleNames : Project -> List Drive.HashSize
+neededSampleNames project =
+  let
+    need s =
+      if s.needsName
+        then Just (T.sampleHashSize s)
+        else Nothing
+  in
+  project.samplePool
+  |> Bank.toIndexedList
+  |> List.filterMap (\(_, s) -> Maybe.andThen need s)
+
+updateSampleNames : Drive.FileNamesByHash -> Project -> Project
+updateSampleNames names project =
+  { project
+  | samplePool = Bank.map (T.updateSampleName names) project.samplePool
+  }
+
 
 toSysExDumps : Maybe Dump.Sound -> Project -> List SysEx
 toSysExDumps defSound project =

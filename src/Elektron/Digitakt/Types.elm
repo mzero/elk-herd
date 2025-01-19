@@ -9,6 +9,9 @@ module Elektron.Digitakt.Types exposing
   , Sample
   , Sound
 
+  , sampleHashSize
+  , updateSampleName
+
   , PLock
   , PLocks
   , plockFromMaybe
@@ -106,6 +109,7 @@ type alias Pattern =
 type alias Sample =
   { name : String       -- cached from +Drive
   , status : Status
+  , needsName : Bool
 
   , binary : Dump.Sample
   }
@@ -117,6 +121,21 @@ type alias Sound =
 
   , binary : Dump.Sound
   }
+
+
+sampleHashSize : Sample -> Drive.HashSize
+sampleHashSize s = Drive.hashSize s.binary.hash (Dump.sampleLength s.binary)
+
+updateSampleName : Drive.FileNamesByHash -> Sample -> Sample
+updateSampleName names s =
+  if s.needsName
+    then
+      case Dict.get (sampleHashSize s) names of
+        Just name -> { s | name = name, needsName = False }
+        _         -> s
+    else
+      s
+
 
 {- These high-level versions of `PLock` ensure that the value is indexing the
 correct `Bank` by using `Index a`.
@@ -200,23 +219,14 @@ buildPatternFromDump dPatternKit =
     , binary = dPatternKit
     }
 
-buildSampleFromDump : Drive.FileNamesByHash -> Dump.Sample -> Sample
-buildSampleFromDump fileNames dSample =
+buildSampleFromDump : Dump.Sample -> Sample
+buildSampleFromDump dSample =
   let
     empty = Dump.isEmptySample dSample
-    hash = dSample.hash
-    length = Dump.sampleLength dSample
-    name =
-        if empty
-          then ""
-          else
-            case Dict.get (Drive.hashSize hash length) fileNames of
-              Just fileName -> fileName
-              _ -> "???"
-
   in
-    { name = name
+    { name = if empty then "" else "???"
     , status = if empty then Empty else Live
+    , needsName = not empty
     , binary = dSample
     }
 
