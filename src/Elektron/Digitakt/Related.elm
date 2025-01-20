@@ -320,10 +320,6 @@ soundHasNoRelations : Related -> Bool
 soundHasNoRelations (Related r) =
   isEmptyRelationArray r.patterns
 
-{-| Treated specially by the instrument, as it is always empty.
--}
-isSampleZero : Index Sample -> Bool
-isSampleZero (Index i) = i == 0
 
 isFree : (Related -> Bool) -> Bank i Related -> Index i -> Bool
 isFree hasNoRelations relBank idx =
@@ -367,7 +363,7 @@ unusedPatterns bank cr = []
 unusedSamples : BankOf Sample -> CrossReference -> List (Index Sample)
 unusedSamples bank cr =
   unrelatedItems sampleHasNoRelations bank cr.sampleRelated
-  |> List.filter (isSampleZero >> not)
+  |> List.filter (isZeroSampleIndex >> not)
 
 unusedSounds : BankOf Sound -> CrossReference -> List (Index Sound)
 unusedSounds bank cr =
@@ -378,7 +374,7 @@ freePattern idx cr = True
 
 freeSample : Index Sample -> CrossReference -> Bool
 freeSample idx cr =
-  not (isSampleZero idx)
+  not (isZeroSampleIndex idx)
   && isFree sampleHasNoRelations cr.sampleRelated idx
 
 freeSound : Index Sound -> CrossReference -> Bool

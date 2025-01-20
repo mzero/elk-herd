@@ -151,7 +151,8 @@ updateProject dump proj =
     { proj
     | samplePool =
         Bank.fromArray
-        <| Array.map (T.buildSampleFromDump >> Just) dump.samples
+        <| Array.indexedMap (\i b -> Just <| T.buildSampleFromDump i b)
+        <| dump.samples
     , binary = Just dump
     }
 
@@ -165,12 +166,12 @@ enlivenPhantoms proj =
   let
     enlivenSample i item =
       if T.isEmptyItem item
-          && (i == 0 || not (Rel.freeSample (Index i) proj.crossReference))
+          && (not (Rel.freeSample (Index i) proj.crossReference))
         then { item
              | status = T.Phantom
              , name =
                 if item.name == ""
-                  then if i == 0 then "off" else "---"
+                  then "---"
                   else item.name
              }
         else item

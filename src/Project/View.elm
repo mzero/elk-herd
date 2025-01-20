@@ -241,6 +241,7 @@ view model =
         name = Maybe.unwrap "" .name mItem
         empty = Maybe.unwrap True DT.isEmptyItem mItem
         phantom = Maybe.unwrap False DT.isPhantomItem mItem
+        zero = k == KSample && DT.isZeroSampleIndex (Index i)
         status =
           case mSrc of
             Nothing -> Sel.Plain
@@ -252,7 +253,7 @@ view model =
             , Attr.class "bank-item"
             , Attr.classList
               [ ("empty", empty)
-              , ("zero", modBy 128 i == 0)
+              , ("zero", zero)
               , ("phantom", phantom)
               , ("selected", status == Sel.Selected)
               , ("dragged", status == Sel.Dragged)

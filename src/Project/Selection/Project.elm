@@ -152,7 +152,7 @@ dragDropSources k =
   IndexSet.toList
   >> List.map Bank.indexToInt
   >> if k == KSample
-    then List.filter ((/=) 0)
+    then List.filter (Index >> DT.isZeroSampleIndex >> not)
     else identity
 
 dragDropDestination : Kind -> Maybe (Index a) -> Maybe Int
@@ -160,7 +160,7 @@ dragDropDestination k =
   Maybe.andThen
     ( Bank.indexToInt
       >> if k == KSample
-          then (\i -> if i == 0 then Nothing else Just i)
+          then (\i -> if DT.isZeroSampleIndex (Index i) then Nothing else Just i)
           else Just
     )
 

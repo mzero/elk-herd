@@ -318,12 +318,13 @@ view model =
         name = Maybe.unwrap "" .name mItem
         empty = Maybe.unwrap True DT.isEmptyItem mItem
         phantom = Maybe.unwrap False DT.isPhantomItem mItem
+        zero = k == KSample && DT.isZeroSampleIndex (Index i)
       in
         Html.div
           ( [ Attr.class "bank-item"
             , Attr.classList
               [ ("empty", empty)
-              , ("zero", i == 0)
+              , ("zero", zero)
               , ("phantom", phantom)
               , ("selected",   isInItems k i model.selected)
               , ("referenced", isInItems k i model.referenced)
