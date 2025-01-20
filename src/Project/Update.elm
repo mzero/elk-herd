@@ -8,12 +8,14 @@ import Process
 import Task
 
 import Alert
-import Bank
+import Bank exposing (Index(..))
+import Bank.Shuffle
 import Browser.Dom
 import ByteArray exposing (ByteArray)
 import Elektron.Digitakt.HighLevel as DT
 import Elektron.Digitakt.Related as DT
 import Elektron.Digitakt.Verify as DT
+import Elektron.Digitakt.Shuffle
 import Elektron.Digitakt.Types as DT
 import Elektron.Drive as Drive exposing (Drive)
 import Job exposing (Job, Step(..))
@@ -103,7 +105,8 @@ makeEmptyProject model =
 processDrop : Sel.DropInfo -> Model -> Model
 processDrop dropInfo model =
   let
-    reselect get set shuf = get >> List.filterMap (Bank.rereference shuf) >> set
+    reselect get set shuf =
+      get >> List.filterMap (Bank.Shuffle.rereference shuf) >> set
 
     reselectPatterns = reselect Sel.selectedPatterns Sel.selectPatterns
     reselectSamples = reselect Sel.selectedSamples Sel.selectSamples
@@ -114,9 +117,9 @@ processDrop dropInfo model =
         shuf =
           case dropInfo.dst of
             Nothing ->
-              Bank.nullShuffle  -- the destination was not valid (sample zero)
+              Bank.Shuffle.nullShuffle  -- the destination was not valid
             Just dst ->
-              Bank.dragAndDrop
+              Elektron.Digitakt.Shuffle.dragAndDrop
                 DT.isEmptyItem
                 (List.map Bank.Index dropInfo.srcs)
                 (Bank.Index dst)
@@ -559,11 +562,11 @@ update msg drive model =
 
     CompactItems k ->
       let
-        compact = Bank.compactDown DT.isEmptyItem
+        compact = Elektron.Digitakt.Shuffle.compactDown DT.isEmptyItem
 
-        compactPatterns p = DT.shufflePatterns (compact 0 p.patterns) p
-        compactSamples p = DT.shuffleSamples (compact 1 p.samplePool) p
-        compactSounds p = DT.shuffleSounds (compact 0 p.soundPool) p
+        compactPatterns p = DT.shufflePatterns (compact (Index 0) p.patterns) p
+        compactSamples p = DT.shuffleSamples (compact (Index 1) p.samplePool) p
+        compactSounds p = DT.shuffleSounds (compact (Index 0) p.soundPool) p
 
         model_ =
           undoable ("Compact " ++ bankName k)

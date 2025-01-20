@@ -13,7 +13,8 @@ import Html
 import Html.Attributes as Attr
 import Html.Events as Events
 
-import Bank exposing (Index(..), Bank, BankOf, Shuffle)
+import Bank exposing (Index(..), Bank, BankOf)
+import Bank.Shuffle as Shuffle exposing (Shuffle)
 import Bank.IndexSet as IndexSet exposing (IndexSet)
 import Elektron.Digitakt.HighLevel as DT exposing (Project, Shuffles)
 import Elektron.Digitakt.Related as Rel
@@ -112,12 +113,12 @@ findExisting baseProj sourceProj =
 
     items =
       { patterns = IndexSet.empty
-      , samples = IndexSet.fromList <| Bank.shuffleSources sampleShuf
-      , sounds = IndexSet.fromList <| Bank.shuffleSources soundShuf
+      , samples = IndexSet.fromList <| Shuffle.shuffleSources sampleShuf
+      , sounds = IndexSet.fromList <| Shuffle.shuffleSources soundShuf
       }
 
     shufs =
-      { patterns = Bank.nullShuffle     -- patterns are never considered the same
+      { patterns = Shuffle.nullShuffle     -- patterns are never considered the same
       , samples = sampleShuf
       , sounds = soundShuf
       }
@@ -251,7 +252,7 @@ performImport model =
   let
     buildShuffle : IndexSet a -> IndexSet a -> Shuffle a
     buildShuffle from to =
-      Bank.importShuffle
+      Shuffle.asImport
         <| List.map2 Tuple.pair
           (IndexSet.toList from)
           (IndexSet.toList <| findBlock (IndexSet.size from) to)

@@ -9,8 +9,10 @@ import Html.Events as Events
 
 import Alert
 import Bank exposing (BankOf, Index(..))
+import Bank.Shuffle as Shuffle
 import Commands as C
 import Elektron.Digitakt.HighLevel as DT
+import Elektron.Digitakt.Shuffle exposing (dragAndDrop)
 import Elektron.Digitakt.Types as DT
 import Html.Aria as Aria
 import Missing.Html.Events as Events
@@ -21,7 +23,6 @@ import Project.Import as Import
 import Project.Selection.Project as Sel
 import Project.Util exposing (..)
 import Undo
-import Elektron.Digitakt.Types exposing (Sample)
 
 
 commands : Model -> C.Commands Msg
@@ -328,9 +329,9 @@ view model =
                     Just dst ->
                       let
                         srcs = List.map Index di.srcs
-                        shuffle = Bank.dragAndDrop DT.isEmptyItem srcs (Index dst) bank
+                        shuffle = dragAndDrop DT.isEmptyItem srcs (Index dst) bank
                       in
-                        (\idx -> Bank.source shuffle idx)
+                        (\idx -> Shuffle.source shuffle idx)
                     Nothing -> Just
                 Nothing -> Just
             else

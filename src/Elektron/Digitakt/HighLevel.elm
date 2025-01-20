@@ -37,7 +37,8 @@ banks of patterns, samples, and sounds), and renaming.
 
 import Array exposing (Array)
 
-import Bank exposing (BankOf, Index(..), Shuffle)
+import Bank exposing (BankOf, Index(..))
+import Bank.Shuffle as Shuffle exposing (Shuffle)
 import Elektron.Digitakt.Dump as Dump
 import Elektron.Digitakt.Blank as Blank
 import Elektron.Digitakt.Related as Rel
@@ -286,7 +287,7 @@ happen with any sample slot plocks, and any sounds in the sound pool.
 -}
 
 mapPLock : Shuffle a -> T.PLock a -> T.PLock a
-mapPLock shuf = Maybe.andThen (Bank.rereference shuf)
+mapPLock shuf = Maybe.andThen (Shuffle.rereference shuf)
 
 mapPLocks : Shuffle a -> T.PLocks a -> T.PLocks a
 mapPLocks shuffle = Array.map (mapPLock shuffle)
@@ -297,7 +298,7 @@ rerefSoundSampleRef shuffle sound =
   let
     origSampleRef = sound.sampleSlot
     newSampleRef =
-      Bank.rereference shuffle origSampleRef
+      Shuffle.rereference shuffle origSampleRef
       |> Maybe.withDefault (Index 0)
     (Index newSampleInt) = newSampleRef
   in
@@ -381,13 +382,13 @@ rebuildBinarySamples project =
 
 shufflePatterns : Shuffle Pattern -> Project -> Project
 shufflePatterns shuffle p =
-  { p | patterns = Bank.reorder shuffle p.patterns }
+  { p | patterns = Shuffle.reorder shuffle p.patterns }
 
 shuffleSamples : Shuffle Sample -> Project -> Project
 shuffleSamples shuffle project =
   let
     patterns = Bank.map (T.onNonEmpty <| rerefPatternSampleRefs shuffle) project.patterns
-    samplePool = Bank.reorder shuffle project.samplePool
+    samplePool = Shuffle.reorder shuffle project.samplePool
     soundPool = Bank.map (rerefSoundSampleRef shuffle) project.soundPool
   in
     rebuildBinarySamples
@@ -401,7 +402,7 @@ shuffleSounds : Shuffle Sound -> Project -> Project
 shuffleSounds shuffle project =
   { project
   | patterns = Bank.map (rerefPatternSoundRefs shuffle) project.patterns
-  , soundPool = Bank.reorder shuffle project.soundPool
+  , soundPool = Shuffle.reorder shuffle project.soundPool
   }
 
 
@@ -420,20 +421,20 @@ those items that aren't moved, but already exist in the destination project.
 importProject : Shuffles -> Shuffles -> Project -> Project -> Project
 importProject moving exisiting importProj baseProj =
   let
-    rerefSamplesShuffle = Bank.mergeShuffles moving.samples exisiting.samples
-    rerefSoundsShuffle = Bank.mergeShuffles moving.sounds exisiting.sounds
+    rerefSamplesShuffle = Shuffle.mergeShuffles moving.samples exisiting.samples
+    rerefSoundsShuffle = Shuffle.mergeShuffles moving.sounds exisiting.sounds
 
     samplePool =
-      Bank.importFrom moving.samples identity
+      Shuffle.importFrom moving.samples identity
         importProj.samplePool baseProj.samplePool
 
     soundPool =
-      Bank.importFrom moving.sounds
+      Shuffle.importFrom moving.sounds
         (rerefSoundSampleRef rerefSamplesShuffle)
         importProj.soundPool baseProj.soundPool
 
     patterns =
-      Bank.importFrom moving.patterns
+      Shuffle.importFrom moving.patterns
         (rerefPatternSampleRefs rerefSamplesShuffle
           >> rerefPatternSoundRefs rerefSoundsShuffle)
         importProj.patterns baseProj.patterns
@@ -475,7 +476,7 @@ findWithin eq base source =
             then Just (i, j)
             else search rest src
   in
-    Bank.importShuffle <| List.filterMap (search baseList) sourceList
+    Shuffle.asImport <| List.filterMap (search baseList) sourceList
 
 
 findSameSamples : Project -> Project -> Shuffle Sample
@@ -483,9 +484,9 @@ findSameSamples base proj =
   let
     sameSample a b = Dump.sameSample a.binary b.binary
   in
-    Bank.mergeShuffles
+    Shuffle.mergeShuffles
       (findWithin sameSample base.samplePool proj.samplePool)
-      (Bank.importShuffle [(Index 0, Index 0)])
+      (Shuffle.asImport [(Index 0, Index 0)])
           -- "OFF" is always mapped, even though it is empty
 
 findSameSounds : Project -> Project -> Shuffle Sound
