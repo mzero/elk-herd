@@ -120,7 +120,7 @@ processDrop dropInfo model =
               Bank.Shuffle.nullShuffle  -- the destination was not valid
             Just dst ->
               Elektron.Digitakt.Shuffle.dragAndDrop
-                DT.isEmptyItem
+                (shuffleSpec dropInfo.kind model)
                 (List.map Bank.Index dropInfo.srcs)
                 (Bank.Index dst)
                 (bankFn model.project)
@@ -562,11 +562,11 @@ update msg drive model =
 
     CompactItems k ->
       let
-        compact = Elektron.Digitakt.Shuffle.compactDown DT.isEmptyItem
+        compact = Elektron.Digitakt.Shuffle.compactDown (shuffleSpec k model)
 
-        compactPatterns p = DT.shufflePatterns (compact (Index 0) p.patterns) p
-        compactSamples p = DT.shuffleSamples (compact (Index 1) p.samplePool) p
-        compactSounds p = DT.shuffleSounds (compact (Index 0) p.soundPool) p
+        compactPatterns p = DT.shufflePatterns (compact p.patterns) p
+        compactSamples p = DT.shuffleSamples (compact p.samplePool) p
+        compactSounds p = DT.shuffleSounds (compact p.soundPool) p
 
         model_ =
           undoable ("Compact " ++ bankName k)

@@ -1,5 +1,7 @@
 module Elektron.Digitakt.Shuffle exposing
-  ( dragAndDrop
+  ( Spec
+
+  , dragAndDrop
   , compactDown
   )
 
@@ -7,7 +9,15 @@ import Array exposing (Array)
 
 import Bank exposing (Bank, Index(..))
 import Bank.Shuffle as Shuffle exposing (Shuffle)
+import Missing.Maybe as Maybe
 
+
+type alias Spec i a =
+  { isEmpty    : a -> Bool
+  , skip       : Index i -> Bool
+  , lowerBound : Index i
+  , upperBound : Index i
+  }
 
 {-| Compute the `Shuffle` from a drag-n-drop operation.  The list of indicies
 being dragged need not be contiguous. The drop point is a single slot index.
@@ -27,33 +37,42 @@ dragging 1 & 4 % 5 onto 8 yields:
 The `isEmpty` argument supplies a test for items in slots that should be
 considered empty anyway. This is used for things like blank patterns.
 -}
-dragAndDrop : (a -> Bool) -> List (Index i) -> Index i -> Bank i a -> Shuffle i
-dragAndDrop isEmpty srcIndexes dstIndex bank =
+dragAndDrop : Spec i a -> List (Index i) -> Index i -> Bank i a -> Shuffle i
+dragAndDrop spec srcIndexes dstIndex bank =
   let
     slots = Bank.toArray bank
     srcs = List.map Bank.indexToInt srcIndexes
     (Index dst) = dstIndex
-      -- TODO: bugs here if Array is too small
-
+    (Index lo) = spec.lowerBound
+    (Index hi) = spec.upperBound
     n = Array.length slots
     clearedSlots = List.foldl (\i a -> Array.set i Nothing a) slots srcs
 
-    placeNext moves srcs_ dst_ =
-      case srcs_ of
+    placeNext sList d moves =
+      case sList of
         [] -> Shuffle.asShuffle moves
-        src_ :: rest ->
-          case Array.get dst_ clearedSlots of
-            Nothing -> Shuffle.nullShuffle   -- ran off end, not enough space
-            Just Nothing -> makeMove moves src_ dst_ rest
-            Just (Just a) ->
-              if isEmpty a
-                then makeMove moves src_ dst_ rest
-                else makeMove moves src_ dst_ (rest ++ [dst_])
+        s :: rest ->
+          if d < lo || hi < d
+            then Shuffle.nullShuffle    -- ran out of bounds
+            else
+              if spec.skip (Index d)
+                then placeNext sList (d + 1) moves
+                else
+                  case Array.get d clearedSlots of
+                    Nothing -> Shuffle.nullShuffle   -- not enough space
+                    Just Nothing -> placeNext rest   (d + 1) <| addMove s d moves
+                    Just (Just a) ->
+                      if spec.isEmpty a
+                        then placeNext  rest         (d + 1) <| addMove s d moves
+                        else placeNext (rest ++ [d]) (d + 1) <| addMove s d moves
 
-    makeMove moves src_ dst_ rest =
-      placeNext ((Index src_, Index dst_) :: moves) rest (dst_ + 1)
+    addMove s d moves =
+      if s /= d
+        then (Index s, Index d) :: moves
+        else                       moves
   in
-    placeNext [] srcs dst
+    placeNext srcs dst []
+
 
 {-| Compute the `Shuffle` from compacting all non-empty items down to the front
 of the bank. The region from `start` to the end of the bank is compacted.
@@ -71,17 +90,18 @@ The `isEmpty` argument supplies a test for items in slots that should be
 considered empty anyway. This is used for things like blank patterns.
 
 -}
-compactDown : (a -> Bool) -> Index i -> Bank i a -> Shuffle i
-compactDown isEmpty (Index start) bank =
+compactDown : Spec i a -> Bank i a -> Shuffle i
+compactDown spec bank =
   let
-    slots = Bank.toArray bank
-    go moves src dst =
-      case Array.get src slots of
-        Nothing -> Shuffle.asShuffle moves
-        Just Nothing -> go                            moves  (src + 1)  dst
-        Just (Just a) ->
-          if isEmpty a
-            then        go                            moves  (src + 1)  dst
-            else        go ((Index src, Index dst) :: moves) (src + 1) (dst + 1)
+    (Index lo) = spec.lowerBound
+    (Index hi) = spec.upperBound
+
+    items =
+      List.range lo hi
+      |> List.map Index
+      |> List.filter
+        (\i -> Bank.get i bank |> Maybe.unwrap True spec.isEmpty |> not)
+      |> List.filter (spec.skip >> not)
   in
-    go [] start start
+    dragAndDrop spec items spec.lowerBound bank
+

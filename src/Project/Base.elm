@@ -16,15 +16,20 @@ module Project.Base exposing
 
   , bankName
   , itemName
+
+  , shuffleSpec
   )
 
 import Dict
 import Json.Decode as D
 
 import Alert
+import Bank exposing (Index(..))
 import ByteArray exposing (ByteArray)
 import Elektron.Digitakt.HighLevel as DT
 import Elektron.Digitakt.Related as DT
+import Elektron.Digitakt.Shuffle as Shuffle
+import Elektron.Digitakt.Types as DT
 import Elektron.Drive as Drive
 import Elektron.Instrument as EI
 import Job
@@ -173,3 +178,22 @@ kindName k =
 itemName : Kind -> Int -> String
 itemName k i = kindName k ++ " " ++ slotLabel k i
 
+
+shuffleSpec : Kind -> Model -> Shuffle.Spec i (DT.BankItem a)
+shuffleSpec k model =
+  let
+    start =
+      case k of
+        KPattern -> 0
+        KSample -> model.samplePoolOffset
+        KSound -> 0
+  in
+  { isEmpty = DT.isEmptyItem
+  , skip =
+      case k of
+        KPattern -> always False
+        KSample -> (\(Index i) -> modBy 128 i == 0)
+        KSound -> always False
+  , lowerBound = Index start
+  , upperBound = Index (start + 127)
+  }

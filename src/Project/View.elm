@@ -329,7 +329,8 @@ view model =
                     Just dst ->
                       let
                         srcs = List.map Index di.srcs
-                        shuffle = dragAndDrop DT.isEmptyItem srcs (Index dst) bank
+                        spec = shuffleSpec k model
+                        shuffle = dragAndDrop spec srcs (Index dst) bank
                       in
                         (\idx -> Shuffle.source shuffle idx)
                     Nothing -> Just
