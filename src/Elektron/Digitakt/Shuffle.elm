@@ -3,6 +3,7 @@ module Elektron.Digitakt.Shuffle exposing
 
   , dragAndDrop
   , compactDown
+  , sort
   )
 
 import Array exposing (Array)
@@ -10,6 +11,7 @@ import Array exposing (Array)
 import Bank exposing (Bank, Index(..))
 import Bank.Shuffle as Shuffle exposing (Shuffle)
 import Missing.Maybe as Maybe
+import Dict
 
 
 type alias Spec i a =
@@ -105,3 +107,22 @@ compactDown spec bank =
   in
     dragAndDrop spec items spec.lowerBound bank
 
+
+sort : (a -> comparable) -> Spec i a -> Bank i a -> Shuffle i
+sort fkey spec bank =
+  let
+    toKey (i, ma) =
+      case ma of
+        Nothing -> Nothing
+        Just a ->
+          if spec.skip i || spec.isEmpty a
+            then Nothing
+            else Just (fkey a, i)
+    items =
+      Bank.toIndexedList bank
+      |> List.filterMap toKey
+      |> Dict.fromList
+      |> Dict.toList
+      |> List.map (\(k, i) -> i)
+  in
+    dragAndDrop spec items spec.lowerBound bank

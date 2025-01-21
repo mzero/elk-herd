@@ -578,6 +578,24 @@ update msg drive model =
       in
         returnMC model_ cmd_
 
+    SortItems k ->
+      let
+        sort = Elektron.Digitakt.Shuffle.sort .name (shuffleAllSpec k model)
+
+        compactPatterns p = DT.shufflePatterns (sort p.patterns) p
+        compactSamples p = DT.shuffleSamples (sort p.samplePool) p
+        compactSounds p = DT.shuffleSounds (sort p.soundPool) p
+
+        model_ =
+          undoable ("Sort " ++ bankName k)
+          <| case k of
+            KPattern -> updateProject compactPatterns model
+            KSample -> updateProject compactSamples model
+            KSound -> updateProject compactSounds model
+        cmd_ = focus (bankId k)
+      in
+        returnMC model_ cmd_
+
     DeleteItems k ->
       let
         go freeFn updateBank candidates =

@@ -7,6 +7,7 @@ module Bank exposing
   , get, set, put, clear
   , update
   , initializeEmpty
+  , length
   , map
   , mapUpdate
   , indexedMap
@@ -79,6 +80,10 @@ update f idx bank = set idx (f <| get idx bank) bank
 -}
 initializeEmpty : Int -> Bank i a
 initializeEmpty count = Bank <| Array.repeat count Nothing
+
+
+length : Bank i a -> Int
+length (Bank a) = Array.length a
 
 {- Create a related bank by mapping all the elements.
 All non-empty slots will be transformed, Empty slots will stay empty.

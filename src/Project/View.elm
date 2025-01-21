@@ -164,12 +164,19 @@ sectionToolBar label k editing sel =
               , msg = RenameItem
               }
           ]
-        , [ buttonIfNot KPattern
+        , [ button
               { title = "Compact Items"
               , text = "\u{2AE9}"  -- tack thing
               , active = False
               , enable = True
               , msg = CompactItems
+              }
+          , button
+              { title = "Sort Items"
+              , text = "\u{1D2C}z"  -- small raised upper case A
+              , active = False
+              , enable = True
+              , msg = SortItems
               }
           ]
         , [ button

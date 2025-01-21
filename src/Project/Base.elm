@@ -17,7 +17,7 @@ module Project.Base exposing
   , bankName
   , itemName
 
-  , shuffleSpec
+  , shuffleSpec, shuffleAllSpec
   )
 
 import Dict
@@ -129,6 +129,7 @@ type Msg
   | SelectUnused Kind
   | RenameItem Kind
   | CompactItems Kind
+  | SortItems Kind
   | DeleteItems Kind
 
   | SelectionItemMsg Kind Int Sel.Msg
@@ -197,3 +198,15 @@ shuffleSpec k model =
   , lowerBound = Index start
   , upperBound = Index (start + 127)
   }
+
+shuffleAllSpec : Kind -> Model -> Shuffle.Spec i (DT.BankItem a)
+shuffleAllSpec k model =
+  let
+    spec = shuffleSpec k model
+    size =
+      case k of
+        KPattern -> Bank.length model.project.patterns
+        KSample -> Bank.length model.project.samplePool
+        KSound -> Bank.length model.project.soundPool
+  in
+    { spec | lowerBound = Index 0, upperBound = Index (size - 1) }
