@@ -223,6 +223,7 @@ h4.dt-name,
 .samples .bank.related .bank-item.zero,
 .samples .bank.import .bank-item.zero {
     background: repeating-linear-gradient(-40deg, #def, #def 5px, #ebf5ff 5px, #ebf5ff 10px);
+    color: #999;
 }
 
 /* MEDIUM COLOR */

@@ -255,9 +255,9 @@ buildCrossReference patterns samplePool soundPool =
         (\(i, mPattern) ->
           mPattern
           |> Maybe.andThen (\p ->
-            if isEmptyItem p
-              then Nothing
-              else Just (patternRelations p)
+            if isOccupiedItem p
+              then Just (patternRelations p)
+              else Nothing
             )
           |> Maybe.withDefault (emptyRelationArray, emptyRelationArray)
         )
@@ -333,12 +333,9 @@ unrelatedItems hasNoRelations itemBank relBank =
     test pair =
       case pair of
         (idx, Just a) ->
-          if isEmptyItem a
-            then Nothing
-            else
-              if isFree hasNoRelations relBank idx
-                then Just idx
-                else Nothing
+          if isOccupiedItem a && isFree hasNoRelations relBank idx
+            then Just idx
+            else Nothing
         _ -> Nothing
   in
     Bank.toIndexedList itemBank |> List.filterMap test

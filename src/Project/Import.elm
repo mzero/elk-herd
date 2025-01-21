@@ -132,7 +132,7 @@ nonEmptySelection sel bank =
     nonEmpty i =
       case Bank.get i bank of
         Nothing -> False
-        Just a -> not (DT.isEmptyItem a)
+        Just a -> DT.isOccupiedItem a
   in
     BSel.selected sel |> IndexSet.filter nonEmpty
 

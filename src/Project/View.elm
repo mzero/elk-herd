@@ -197,9 +197,10 @@ bankSelector model k =
         start = n * 128
         end = start + 127
         range = List.range start end
-        itemEmpty i = Bank.get (Index i) model.project.samplePool |> Maybe.unwrap True DT.isEmptyItem
+        itemOccupied i = Bank.get (Index i) model.project.samplePool
+          |> Maybe.unwrap False DT.isOccupiedItem
         itemStatus i = Sel.itemStatus k i model.selection model.related
-        empty = List.all itemEmpty range
+        empty = not <| List.any itemOccupied range
         status = List.foldl (\i b -> if b == Sel.Plain then itemStatus i else b) Sel.Plain range
 
         onDragEvents =

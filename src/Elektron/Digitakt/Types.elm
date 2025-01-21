@@ -3,7 +3,7 @@ module Elektron.Digitakt.Types exposing
   , BankItem
   , isEmptyItem
   , isPhantomItem
-  , isFixed
+  , isOccupiedItem
   , onNonEmpty
   , Pattern
   , Sample
@@ -54,7 +54,7 @@ These are marked as `Phantom`.
 Zero items are the "0" entries on each page of the Sample Pool. These are
 unassignable & unmoveable.
 -}
-type Status = Empty | Phantom | Zero | Live
+type Status = Zero | Empty | Phantom | Live
 type alias BankItem a = { a | status : Status, name : String }
 
 isEmptyItem : BankItem a -> Bool
@@ -63,8 +63,8 @@ isEmptyItem a = a.status == Empty
 isPhantomItem : BankItem a -> Bool
 isPhantomItem a = a.status == Phantom
 
-isFixed : BankItem a -> Bool
-isFixed a = a.status == Zero
+isOccupiedItem : BankItem a -> Bool
+isOccupiedItem a = a.status == Live || a.status == Phantom
 
 isZeroSampleIndex : Index Sample -> Bool
 isZeroSampleIndex (Index i) = modBy 128 i == 0

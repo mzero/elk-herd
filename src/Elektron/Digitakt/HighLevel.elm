@@ -459,9 +459,9 @@ findWithin eq base source =
       case ma of
         Nothing -> Nothing
         Just a ->
-          if T.isEmptyItem a
-            then Nothing
-            else Just (i, a)
+          if T.isOccupiedItem a
+            then Just (i, a)
+            else Nothing
 
     itemList = Bank.toIndexedList >> List.filterMap nonEmptyItem
 
