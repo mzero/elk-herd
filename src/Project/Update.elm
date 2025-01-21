@@ -96,7 +96,12 @@ adjustSelection selection model =
 updateProject : (DT.Project -> DT.Project) -> Model -> Model
 updateProject fProj model =
   adjustSelection Sel.initSelection
-    { model | project = DT.rebuildCrossReference <| fProj model.project }
+    { model
+    | project =
+        DT.rebuildCrossReference
+        <| DT.updateSampleNames model.extraFileNames
+        <| fProj model.project
+    }
 
 makeEmptyProject : Model -> DT.Project
 makeEmptyProject model =
