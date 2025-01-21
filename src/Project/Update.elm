@@ -158,10 +158,13 @@ validateProject verb origin drive project0 pr model =
     (userMessage, ok) = DT.validateProject project
     action = verb ++ " " ++ origin
 
-    dispFn disp =
+    dispFn disp m =
       case disp of
-        LoadProject -> updateProject (always project) >> undoable action
-        StartImport -> \m ->
+        LoadProject ->
+          { m | samplePoolOffset = 0 }
+          |> updateProject (always project) 
+          |> undoable action
+        StartImport ->
           { m | importing = Just <| Import.init origin m.project project }
 
     nameFn name m = { m | projectName = name }
@@ -397,6 +400,7 @@ update msg drive model =
     ClearProject ->
       returnM
         (updateProject (\_ -> makeEmptyProject model) model
+        |> (\m -> { m | samplePoolOffset = 0 } )
         |> undoable "Clear project"
         )
 
