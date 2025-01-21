@@ -79,7 +79,7 @@ argByte : String -> Arg Int
 argByte fieldName =
   { build = Builder.byte
   , parse = Parser.byte
-  , view = List.singleton << hexFieldView fieldName << Util.hexByteString
+  , view = List.singleton << hexFieldView fieldName << Util.hexUint8
   }
 
 argBytes : String -> Arg ByteArray
@@ -147,7 +147,7 @@ argByteList fieldName =
   , view = (\bs -> List.singleton <|
       hexFieldView fieldName
         <| String.join ", "
-        <| List.map ((++) "0x" << Util.hexByteString) bs
+        <| List.map ((++) "0x" << Util.hexUint8) bs
     )
   }
 
