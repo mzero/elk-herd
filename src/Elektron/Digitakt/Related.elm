@@ -241,7 +241,9 @@ buildCrossReference patterns samplePool soundPool =
           <| List.map Array.toList
           <| Array.toList pattern.soundPlocks
         samp3 = List.filterMap soundSample sounds
-        samples = samp1 ++ samp2 ++ samp3
+        samples =
+          List.filter (isZeroSampleIndex >> not)
+          <| samp1 ++ samp2 ++ samp3
       in
         (asRelationArray samples, asRelationArray sounds)
 

@@ -250,6 +250,7 @@ view model =
         name = Maybe.unwrap "" .name mItem
         empty = Maybe.unwrap True DT.isEmptyItem mItem
         phantom = Maybe.unwrap False DT.isPhantomItem mItem
+        occupied = Maybe.unwrap False DT.isOccupiedItem mItem
         zero = k == KSample && DT.isZeroSampleIndex (Index i)
         status =
           case mSrc of
@@ -272,7 +273,7 @@ view model =
             ]
             ++ List.map
                 (Attr.map (SelectionItemMsg k i))
-                (Sel.itemHandlers k i empty)
+                (Sel.itemHandlers k i occupied)
           )
           <| if doEdit
             then
