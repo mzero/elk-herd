@@ -1,9 +1,14 @@
 module SysEx.ApiUtil exposing
-  ( DirEntry
-
-  , Arg
+  ( Arg
   , argBool, argByte, argBytes, argUint32be, argString0win1252
-  , argDirEntry, argByteList
+
+  , DirEntry
+  , argDirEntry
+
+  , QueryValue(..)
+  , argQueryValue
+
+  , argByteList
   , argListAll
 
   , Msg0, Msg1, Msg2, Msg3, Msg4, Msg5, Msg6
@@ -135,6 +140,45 @@ argDirEntry =
       , fieldView "type" <| String.fromChar entry.type_
       , fieldView "name" entry.name
       ]
+    )
+  }
+
+type QueryValue
+  = QVNone
+  | QVBool Bool
+  | QVSignedInt Int Int     -- two 32bit values, hi,lo
+  | QVUnsignedInt Int Int   -- same
+  | QVString String
+
+argQueryValue : Arg QueryValue
+argQueryValue =
+  { build =
+    (\qv -> Builder.sequence <|
+      case qv of
+          QVNone              -> [ Builder.uint8 0 ]
+          QVBool b            -> [ Builder.uint8 1, Builder.uint8 (if b then 1 else 0) ]
+          QVSignedInt hi lo   -> [ Builder.uint8 2, Builder.uint32be hi, Builder.uint32be lo ]
+          QVUnsignedInt hi lo -> [ Builder.uint8 3, Builder.uint32be hi, Builder.uint32be lo ]
+          QVString s          -> [ Builder.uint8 4, Builder.string0win1252 s]
+    )
+  , parse =
+    Parser.uint8 |> Parser.andThen (\q ->
+      case q of
+        0 -> Parser.succeed QVNone
+        1 -> Parser.map     QVBool        parseBool
+        2 -> Parser.map2    QVSignedInt   Parser.uint32be Parser.uint32be
+        3 -> Parser.map2    QVUnsignedInt Parser.uint32be Parser.uint32be
+        4 -> Parser.map     QVString      Parser.string0win1252
+        _ -> Parser.fail ("unknown query response type: " ++ String.fromInt  q)
+      )
+  , view =
+   (\qv ->
+      case qv of
+          QVNone              -> [ fieldView "none" "" ]
+          QVBool b            -> [ fieldView "bool" <| if b then "True" else "False" ]
+          QVSignedInt hi lo   -> [ fieldView "int64" <| Util.hexUint64 hi lo ]
+          QVUnsignedInt hi lo -> [ fieldView "uint64" <| Util.hexUint64 hi lo ]
+          QVString s          -> [ fieldView "string" s ]
     )
   }
 

@@ -90,6 +90,7 @@ type Msg
  | SendDumpRequest Int
  | SendSysEx SysEx
  | ProbeMessage Int
+ | QueryMessage String
  | DecodeHex
 
 
@@ -125,6 +126,18 @@ probeMessage msg model =
           -- List.map sxArg <| List.range 0 8
 
 
+querieKeys : List String
+querieKeys =
+  [ "export.preferred_kit_file_extension"
+  , "export.preferred_preset_file_extension"
+  , "export.preferred_project_file_extension"
+  , "midi.rpc_file_chunk_size_max"
+  , "midi.sysex_size_max"
+  , "sample_file.interleaved_stereo_support"
+  , "sample_file.mono_support"
+  , "sample_file.sample_rates"
+  ]
+
 update : Msg -> Model -> (Model, List SysEx, List ElkMessage)
 update msg model = case msg of
   ShowDebug -> ({ model | show = True }, [], [])
@@ -147,6 +160,7 @@ update msg model = case msg of
     in (model, [SysEx.ElektronDump dump], [])
   SendSysEx sx -> (model, [sx], [])
   ProbeMessage msg_ -> (model, [], probeMessage msg_ model)
+  QueryMessage key -> (model, [], [Message.QueryRequest key])
   DecodeHex -> (decodeHex model, [], [])
 
 
@@ -262,6 +276,31 @@ view model = if not Build.midiDebugger then Html.div [] [] else
                   )
             )
 
+    queries =
+      Html.div
+        [ Attr.class "btn-group btn-group-sm dropdown"
+        , Aria.role "group"
+        , Aria.label "Queries"
+        ]
+        [ Html.button
+          [ Attr.type_ "button"
+          , Attr.class "btn btn-outline-secondary dropdown-toggle"
+          , Attr.attribute "data-toggle" "dropdown"
+          , Aria.expanded False
+          ]
+          [ Html.text "Query…" ]
+        , Html.div [ Attr.class "dropdown-menu"]
+          <| List.map
+              (\key -> Html.a
+                [ Attr.class "dropdown-item"
+                , Attr.href "#"
+                , Events.onClick <| QueryMessage key
+                ]
+                [ Html.text key ]
+              )
+              querieKeys
+        ]
+
     decode =
       Html.div
         [ Attr.class "btn-group btn-group-sm input-group input-group-sm"
@@ -372,6 +411,7 @@ view model = if not Build.midiDebugger then Html.div [] [] else
                 ]
               , Html.div []
                 [ probes
+                , queries
                 ]
               , Html.div []
                 [ dumps

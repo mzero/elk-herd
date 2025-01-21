@@ -37,6 +37,9 @@ type ElkMessage
   | VersionRequest
   | VersionResponse String String
 
+  | QueryRequest String
+  | QueryResponse QueryValue
+
   | DirListRequest String
   | DirListResponse (List DirEntry)
   | DirCreateRequest String
@@ -73,6 +76,7 @@ type ElkMessage
   | TimeOut
 
 
+
 {- APIs come in pairs of request and response messages. Each `api*` value is
 description of such a pair. It is built from two `Msg*` objects which
 descirbe the arguments to the two messages.
@@ -94,6 +98,11 @@ apiVersion = buildApi 0x02 "Version"
   (msg2 VersionResponse
     (argString0win1252 "build")
     (argString0win1252 "version"))
+
+apiQuery : Api (Msg1 ElkMessage String) (Msg1 ElkMessage QueryValue)
+apiQuery = buildApi 0x09 "Query"
+  (msg1 QueryRequest (argString0win1252 "key"))
+  (msg1 QueryResponse (argQueryValue))
 
 -- 0x1n Messages: Directory operations --
 
@@ -225,6 +234,8 @@ messageBuilder msg = case msg of
   DeviceResponse dev msgs model     -> apiDevice.response.build dev msgs model
   VersionRequest                    -> apiVersion.request.build
   VersionResponse build version     -> apiVersion.response.build build version
+  QueryRequest key                  -> apiQuery.request.build key
+  QueryResponse value               -> apiQuery.response.build value
   DirListRequest path               -> apiDirList.request.build path
   DirListResponse entries           -> apiDirList.response.build entries
   DirCreateRequest path             -> apiDirCreate.request.build path
@@ -274,6 +285,7 @@ parserApiTable =
     Dict.fromList <| List.concat
       [ msg apiDevice
       , msg apiVersion
+      , msg apiQuery
       , msg apiDirList
       , msg apiDirCreate
       , msg apiDirDelete
@@ -308,6 +320,8 @@ viewMessage msg = List.map (Html.map never) <| case msg of
   DeviceResponse dev msgs model     -> apiDevice.response.view dev msgs model
   VersionRequest                    -> apiVersion.request.view
   VersionResponse build version     -> apiVersion.response.view build version
+  QueryRequest key                  -> apiQuery.request.view key
+  QueryResponse value               -> apiQuery.response.view value
   DirListRequest path               -> apiDirList.request.view path
   DirListResponse entries           -> apiDirList.response.view entries
   DirCreateRequest path             -> apiDirCreate.request.view path
