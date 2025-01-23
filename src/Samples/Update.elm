@@ -15,6 +15,7 @@ import Time
 import Alert
 import ByteArray exposing (ByteArray)
 import Elektron.Drive as Drive exposing (Drive)
+import Elektron.Instrument as EI
 import Elektron.Path as Path exposing (Path)
 import Missing.Html.Events as Events
 import Missing.List as List
@@ -174,7 +175,7 @@ bumpQueue = withModel <| \model ->
             QAReadFile path name ->
               bumpPump <| startRead (Path.pathString path)
             QAWriteFile path fileName v ->
-              addCmd <| Portage.readAudioFile (False, v)
+              addCmd <| Portage.readAudioFile (EI.supportsStereo model.instrument, v)
         in
           updateModel (\m -> { m | queue = Just q_ })
           >> uact

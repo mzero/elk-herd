@@ -9,6 +9,7 @@ module Elektron.Instrument exposing
   , report
 
   , hasDriveSamples, hasProjects
+  , supportsStereo
 
   , ProjectSpec
   , StorageVersions
@@ -86,6 +87,18 @@ hasDriveSamples inst =
     , 0x21  -- itemRename
     ]
 
+supportsStereo : Instrument -> Bool
+supportsStereo inst =
+  case inst.device of
+    Digitakt -> False
+    Digitakt2 -> True
+    Unknown -> False
+  {- TODO: The "right" way to do this is to use the new Query API and use key
+  sample_file.interleaved_stereo_support to see if stereo is supported.
+  But that's a lot of work, and since only these two instruments are
+  supported, and one is always mono, the other has always supported stereo,
+  this is expedient.
+  -}
 hasProjects : Instrument -> Bool
 hasProjects inst = inst.projectSpec /= Nothing
 
