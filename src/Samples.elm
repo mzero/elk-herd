@@ -14,7 +14,9 @@ module Samples exposing
 import Html
 
 import Commands as C
-import Elektron.Drive exposing (Drive)
+import Elektron.Drive as Drive exposing (Drive)
+import Elektron.Instrument as EI
+import Missing.Maybe as Maybe
 import Samples.Base
 import Samples.Update
 import Samples.View
@@ -23,11 +25,11 @@ import SysEx.Client
 
 type alias Model = Samples.Base.Model
 
-init : Bool -> Model
+init : EI.Instrument -> Bool -> Model
 init = Samples.Base.init
 
-drive : Model -> Drive
-drive = .drive
+drive : Maybe Model -> Drive
+drive = Maybe.unwrap Drive.emptyDrive .drive
 
 
 type alias Msg = Samples.Base.Msg

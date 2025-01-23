@@ -501,7 +501,7 @@ updateRecvResponseFail msg = withModel <| \model ->
 update : Msg -> Model -> (Model, Cmd Msg, Requests Msg)
 update outerMsg model = run model <| case outerMsg of
   KickOff ->
-    updateModel (\m -> init m.debug)
+    updateModel reset
     >> Ops.bumpScanDrive
     >> enqueue [ QAListDir True Path.rootPath ]
     >> showProgress "Scan +Drive" False

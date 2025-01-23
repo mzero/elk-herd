@@ -25,7 +25,7 @@ module Samples.Base exposing
   , emptyQueue
 
   , Model
-  , init
+  , init, reset
 
   , Msg(..)
 
@@ -38,6 +38,7 @@ import Set
 
 import Alert
 import Elektron.Drive as Drive exposing (Drive)
+import Elektron.Instrument as EI
 import Elektron.Path as Path exposing (Path)
 import Missing.Html.Events as Events
 import Samples.Transfer exposing (Pump)
@@ -183,7 +184,8 @@ emptyQueue =
 
 
 type alias Model =
-  { debug : Bool
+  { instrument : EI.Instrument
+  , debug : Bool
   , opCounts : Dict.Dict String Int
 
   , drive : Drive
@@ -197,11 +199,25 @@ type alias Model =
   , alertModel : Alert.Model
   }
 
-init : Bool -> Model
-init debug =
-  { debug = debug
+init : EI.Instrument -> Bool -> Model
+init inst debug =
+  { instrument = inst
+  , debug = debug
   , opCounts = Dict.empty
   , drive = Drive.emptyDrive
+  , queue = Nothing
+  , pump = Nothing
+  , reportScan = True
+  , selection = Nothing
+  , inDrop = Nothing
+  , viewMode = ViewHover
+  , alertModel = Alert.noAlert
+  }
+
+reset : Model -> Model
+reset model =
+  { model
+  | drive = Drive.emptyDrive
   , queue = Nothing
   , pump = Nothing
   , reportScan = True

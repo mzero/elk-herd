@@ -74,11 +74,14 @@ mainView page model =
 
     pageContent =
       case page of
-        SamplesPage -> Html.map OnSamples <| Samples.view model.samplesModel
+        SamplesPage ->
+          case model.samplesModel of
+            Just sm -> Html.map OnSamples <| Samples.view sm
+            Nothing -> Html.div [] []
         ProjectPage ->
           case model.projectModel of
             Just pm -> Html.map OnProject <| Project.view pm
-            Nothing -> Html.div [][]
+            Nothing -> Html.div [] []
 
     pageCommands =
       case page of
