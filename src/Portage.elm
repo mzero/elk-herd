@@ -82,7 +82,7 @@ port writeBinaryFile_ : (String, String, E.Value) -> Cmd msg
 -- read audio file
 
 port droppedFile : ((List String, E.Value) -> msg) -> Sub msg
-port readAudioFile : E.Value -> Cmd msg
+port readAudioFile : (Bool, E.Value) -> Cmd msg
 port sampleData : (List (List Int) -> msg) -> Sub msg
 port sampleDataError : (String -> msg) -> Sub msg
 

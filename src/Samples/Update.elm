@@ -174,7 +174,7 @@ bumpQueue = withModel <| \model ->
             QAReadFile path name ->
               bumpPump <| startRead (Path.pathString path)
             QAWriteFile path fileName v ->
-              addCmd <| Portage.readAudioFile v
+              addCmd <| Portage.readAudioFile (False, v)
         in
           updateModel (\m -> { m | queue = Just q_ })
           >> uact
