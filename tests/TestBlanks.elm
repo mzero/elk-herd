@@ -8,9 +8,7 @@ import ByteArray.Builder as Builder
 import Elektron.Digitakt.Blank as Blank
 import Elektron.Digitakt.CppStructs as CppStructs
 import Elektron.Digitakt.Dump as Dump
-import Elektron.Instrument exposing (Device(..))
-import Elektron.Struct.Version exposing (Version)
-import Elektron.Instrument exposing (productName)
+import Elektron.Instrument exposing (Device(..), Version, productName)
 
 
 tests : T.Test

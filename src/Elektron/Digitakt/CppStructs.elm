@@ -12,8 +12,7 @@ Mark for it, and he can generate it for you.
 
 -}
 
-import Elektron.Instrument exposing (Device(..))
-import Elektron.Struct.Version exposing (Version)
+import Elektron.Instrument exposing (Device(..), Version)
 
 patternStorage_kitIndex : Version -> Maybe Int
 patternStorage_kitIndex v =

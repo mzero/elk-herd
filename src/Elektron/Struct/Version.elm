@@ -1,6 +1,5 @@
 module Elektron.Struct.Version exposing
-  ( Version
-  , VersionSpec(..)
+  ( VersionSpec(..)
 
   , external, int, uint32be
   )
@@ -9,27 +8,10 @@ import Html
 
 import ByteArray.Parser as Parser
 import ByteArray.Builder as Builder
+import Elektron.Instrument exposing (Device, Version)
+import Elektron.Struct.Part as Part
 import Elektron.Struct as ST
 import SysEx.Internal exposing (..)
-import Elektron.Instrument exposing (Device)
-import Elektron.Struct.Part as Part
-
-
-
-{- Elektron structures are versioned. The versions in the binary dumps are
-just small integers... and each structure stars with version 0 and progresses.
-
-Different devices reuse the same version sequence for the same structures.
-Thus, a Digitakt v2 kitStorage is not the same as Digitakt2 v2 kitStorage.
-Since elk-herd handles boht devices with the same set of structures, the
-device is made part of this Version type.
-
-NB: Only the integer portion is serialized in the dumps.
-
-NB: Be careful not to confuse version numbers for different structures. Ask
-Mark why this doesn't have a phantom type to help with that.
--}
-type alias Version = { device : Device, int : Int }
 
 
 {- When parsing a structure, sometimes we know only the device, and we want

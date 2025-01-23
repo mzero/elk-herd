@@ -44,8 +44,7 @@ import Elektron.Digitakt.Blank as Blank
 import Elektron.Digitakt.Related as Rel
 import Elektron.Digitakt.Types as T exposing (BankItem, Pattern, Sample, Sound)
 import Elektron.Drive as Drive
-import Elektron.Instrument as EI
-import Elektron.Struct.Version exposing (Version)
+import Elektron.Instrument as EI exposing (Version)
 import Missing.Maybe as Maybe
 import SysEx.Dump
 import SysEx.SysEx exposing (SysEx)
