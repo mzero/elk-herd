@@ -1,7 +1,6 @@
 module Elektron.Digitakt.HighLevel exposing
   ( Project
   , emptyProject
-  , projectVersions
 
   , rebuildCrossReference
 
@@ -89,24 +88,6 @@ projectEmptySound : Project -> Maybe Dump.Sound
 projectEmptySound proj =
   proj.blankPattern
   |> Maybe.andThen (\pat -> Array.get 0 pat.kit.sounds)
-
-projectVersions : Project -> Maybe EI.StorageVersions
-projectVersions proj =
-  let
-    patternPartVersions f =
-      Bank.toArray proj.patterns
-      |> Array.toList
-      |> List.filterMap (Maybe.map (.binary >> f >> .version >> .int))
-      |> List.maximum
-
-    patternVersion =
-      Maybe.map2 max
-        (patternPartVersions .pattern)
-        (patternPartVersions .kit)
-
-    projectVersion = Maybe.map (.version >> .int) proj.binary
-  in
-    Maybe.map2 EI.StorageVersions projectVersion patternVersion
 
 
 rebuildCrossReference : Project -> Project
