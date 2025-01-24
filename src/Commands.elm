@@ -71,6 +71,11 @@ view cmds =
   let
     hiddenInputId s = "hidden-input-" ++ s
 
+    btnText text =
+      [ Html.span [ Attr.class "cmd-icon" ] [ ]
+      , Html.span [ Attr.class "cmd-text d-none d-lg-inline" ] [ Html.text text ]
+      ]
+
     item i = case i of
       Anchor id text url ->
         Html.a
@@ -81,7 +86,7 @@ view cmds =
           , Attr.rel "noopener noreferer"
           , Aria.role "button"
           ]
-          [ Html.text text ]
+          (btnText text)
 
       Button id text command ->
         Html.button
@@ -90,7 +95,7 @@ view cmds =
           , Attr.type_ "button"
           , Events.onClick command
           ]
-          [ Html.text text ]
+          (btnText text)
 
       LoadFile id text commandFn accept _ ->
         Html.label
@@ -100,7 +105,7 @@ view cmds =
           , Attr.for (hiddenInputId id)
           , Aria.role "button"
           ]
-          [ Html.text text ]
+          (btnText text)
       Subpanel h ->
           h
 

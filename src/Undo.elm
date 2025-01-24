@@ -125,7 +125,7 @@ view m =
         empty = List.isEmpty items
         toggleId = "toggle-btn-" ++ title
       in
-        Html.div [ Attr.class "btn-group btn-group-sm flex-fill" ]
+        Html.div [ Attr.class "btn-group btn-group-sm" ]
           [ Html.button
             [ Attr.type_ "button"
             , Attr.class "btn btn-outline-secondary"
