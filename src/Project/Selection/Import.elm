@@ -119,10 +119,10 @@ update msg s =
     SoundMsg bmsg -> { s | sounds = BSel.update bmsg s.sounds }
 
 itemHandlers : Kind -> Int -> Bool -> List (Html.Attribute Msg)
-itemHandlers k i empty =
+itemHandlers k i occupied =
   let
     build mFn =
-      List.map (Attr.map mFn) <| BSel.itemHandlers (Index i) empty
+      List.map (Attr.map mFn) <| BSel.itemHandlers (Index i) occupied
   in
     case k of
       KPattern -> build PatternMsg

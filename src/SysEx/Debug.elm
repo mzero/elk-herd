@@ -258,7 +258,7 @@ view model = if not Build.midiDebugger then Html.div [] [] else
                   , Attr.type_ "button"
                   , Events.onClick <| ProbeMessage msg
                   ]
-                  [ Html.text <| "0x" ++ Util.hexByteString msg ]
+                  [ Html.text <| "0x" ++ Util.hexUint8 msg ]
                   )
             )
 

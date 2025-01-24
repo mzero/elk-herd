@@ -1,7 +1,6 @@
 module Util exposing
   ( siString
-  , hexByteString
-  , hexBytesString
+  , hexUint, hexUint8, hexUint16, hexUint32, hexUint64
   , emptyContiguousSpaceIndex
   )
 
@@ -9,6 +8,7 @@ module Util exposing
 -}
 
 import Array exposing (Array)
+import Bitwise
 
 {-| Render a file size as a short, human readable string. It picks the best
 scaling factor: giga-, mega-, kilo-, or units as needed.
@@ -32,23 +32,33 @@ siString =
     ) << toFloat
 
 
-hexNibble : Int -> String
-hexNibble i = String.slice i (i+1) "0123456789abcdef"
+hexDigits : Array Char
+hexDigits = Array.fromList <| String.toList  "0123456789abcdef"
 
-hexByteString : Int -> String
-hexByteString b = hexNibble (b // 16) ++ hexNibble (modBy 16 b)
-
-hexBytesString : Int -> String
-hexBytesString i =
+hexUint : Int -> Int -> String
+hexUint n v =
   let
-    go v r =
-      if v == 0
-        then r
-        else go (v // 256) (hexByteString (modBy 256 v) ++ r)
+    nib i =
+      Array.get (Bitwise.shiftRightZfBy (4 * i) v |> Bitwise.and 0x0f) hexDigits
+      |> Maybe.withDefault ' '
   in
-    if i == 0
-      then "0x00"
-      else "0x" ++ go i ""
+    List.range 0 (n // 4 - 1)
+    |> List.map nib
+    |> List.reverse
+    |> String.fromList
+
+hexUint8 : Int -> String
+hexUint8 = hexUint 8
+
+hexUint16 : Int -> String
+hexUint16 = hexUint 16
+
+hexUint32 : Int -> String
+hexUint32 = hexUint 32
+
+hexUint64 : Int -> Int -> String
+hexUint64 hi lo = hexUint32 hi ++ "::" ++ hexUint32 lo
+
 
 emptyContiguousSpaceIndex : Bool -> Int -> Array (Maybe a) -> Maybe Int
 emptyContiguousSpaceIndex banked n array =

@@ -223,6 +223,7 @@ h4.dt-name,
 .samples .bank.related .bank-item.zero,
 .samples .bank.import .bank-item.zero {
     background: repeating-linear-gradient(-40deg, #def, #def 5px, #ebf5ff 5px, #ebf5ff 10px);
+    color: #999;
 }
 
 /* MEDIUM COLOR */
@@ -581,11 +582,36 @@ h4.dt-name,
    color: #c33
 }
 
+#page-left {
+    min-width: 150px;
+    max-width: 280px;
+    padding-right: 0;
+}
+
 #page-panel {
     display: flex;
     justify-content: center;
     margin: 0 0 1rem 0;
 }
+
+#page-panel button {
+    padding-left: 0;
+    padding-right: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+#page-panel .page-icon {
+    width: 48px;
+    height: 24px;
+    background-image: url("cmd-icons.png");
+    background-repeat: no-repeat;
+    background-position: 0 100px;
+}
+
+#page-panel #page-samples  .page-icon { background-position-y: -799px; }
+#page-panel #page-project  .page-icon { background-position-y: -839px; }
 
 #cmd-panel {
     margin: 0 0 1rem 0;
@@ -630,35 +656,48 @@ h4.dt-name,
 }
 
 #cmd-panel .cmd-button {
-    padding-left: 50px;
+    padding-left: 5px;
+    padding-right: 5px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+#cmd-panel .cmd-button .cmd-icon {
+    width: 48px;
+    height: 24px;
     background-image: url("cmd-icons.png");
     background-repeat: no-repeat;
-    background-position: 5px 100px;
+    background-position: 0 100px;
+    flex: 0 0 auto;
+}
+
+#cmd-panel .cmd-button .cmd-text {
+    flex: 1 0 auto;
 }
 
 
-#cmd-panel #cmd-rename-item    { background-position-y: -474px; }
-#cmd-panel #cmd-move-item      { background-position-y: -514px; }
-#cmd-panel #cmd-create-dir     { background-position-y: -554px; }
-#cmd-panel #cmd-delete-item    { background-position-y: -594px; }
-#cmd-panel #cmd-empty-trash    { background-position-y: -634px; }
-#cmd-panel #cmd-send-sample    { background-position-y: -674px; }
-#cmd-panel #cmd-receive-sample { background-position-y: -714px; }
-#cmd-panel #cmd-scan-drive     { background-position-y:  -74px; }
-#cmd-panel #cmd-find-collisions{ background-position-y: -754px; }
+#cmd-panel #cmd-rename-item      .cmd-icon { background-position-y: -479px; }
+#cmd-panel #cmd-move-item        .cmd-icon { background-position-y: -519px; }
+#cmd-panel #cmd-create-dir       .cmd-icon { background-position-y: -559px; }
+#cmd-panel #cmd-delete-item      .cmd-icon { background-position-y: -599px; }
+#cmd-panel #cmd-empty-trash      .cmd-icon { background-position-y: -639px; }
+#cmd-panel #cmd-send-sample      .cmd-icon { background-position-y: -679px; }
+#cmd-panel #cmd-receive-sample   .cmd-icon { background-position-y: -719px; }
+#cmd-panel #cmd-scan-drive       .cmd-icon { background-position-y:  -79px; }
+#cmd-panel #cmd-find-collisions  .cmd-icon { background-position-y: -759px; }
 
-#cmd-panel #cmd-proj-dev-fetch  { background-position-y:  -34px; }
-#cmd-panel #cmd-proj-dev-send   { background-position-y:    6px; }
-#cmd-panel #cmd-proj-dev-import { background-position-y:  -74px; }
-#cmd-panel #cmd-proj-file-open  { background-position-y: -114px; }
-#cmd-panel #cmd-proj-file-save  { background-position-y: -194px; }
-#cmd-panel #cmd-proj-file-import{ background-position-y: -154px; }
-#cmd-panel #cmd-proj-clear      { background-position-y: -314px; }
+#cmd-panel #cmd-proj-dev-fetch   .cmd-icon { background-position-y:  -39px; }
+#cmd-panel #cmd-proj-dev-send    .cmd-icon { background-position-y:    1px; }
+#cmd-panel #cmd-proj-dev-import  .cmd-icon { background-position-y:  -79px; }
+#cmd-panel #cmd-proj-file-open   .cmd-icon { background-position-y: -119px; }
+#cmd-panel #cmd-proj-file-save   .cmd-icon { background-position-y: -199px; }
+#cmd-panel #cmd-proj-file-import .cmd-icon { background-position-y: -159px; }
+#cmd-panel #cmd-proj-clear       .cmd-icon { background-position-y: -319px; }
 
-#cmd-panel #cmd-help           { background-position-y: -274px; }
-#cmd-panel #cmd-app-settings   { background-position-y: -354px; }
-#cmd-panel #cmd-midi-settings  { background-position-y: -394px; }
-#cmd-panel #cmd-close-midi     { background-position-y: -434px; }
+#cmd-panel #cmd-help             .cmd-icon { background-position-y: -279px; }
+#cmd-panel #cmd-app-settings     .cmd-icon { background-position-y: -359px; }
+#cmd-panel #cmd-midi-settings    .cmd-icon { background-position-y: -399px; }
+#cmd-panel #cmd-close-midi       .cmd-icon { background-position-y: -439px; }
 
 #cmd-panel #cmd-reset-dt {
     font-size: 0.7rem;

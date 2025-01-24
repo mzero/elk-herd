@@ -300,7 +300,7 @@ parseMessage =
 viewMessage : ElkMessage -> List (Html.Html msg)
 viewMessage msg = List.map (Html.map never) <| case msg of
   Unknown id data ->
-    [ fieldView "message" <| Util.hexByteString id
+    [ fieldView "message" <| Util.hexUint8 id
     , hexdumpFieldView "data" data
     ]
 
@@ -336,21 +336,21 @@ viewMessage msg = List.map (Html.map never) <| case msg of
 
   TestRequest id ->
     [ fieldView "message" "TestRequest"
-    , fieldView "id" <| Util.hexByteString id
+    , fieldView "id" <| Util.hexUint8 id
     ]
   TestRequestArgs id args ->
     [ fieldView "message" "TestRequestArgs"
-    , fieldView "id" <| Util.hexByteString id
+    , fieldView "id" <| Util.hexUint8 id
     , hexdumpFieldView "args" args
     ]
   TestRequestString id arg ->
     [ fieldView "message" "TestRequestArgs"
-    , fieldView "id" <| Util.hexByteString id
+    , fieldView "id" <| Util.hexUint8 id
     , fieldView "arg" arg
     ]
   TestRequest2String id s1 s2 ->
     [ fieldView "message" "TestRequestArgs"
-    , fieldView "id" <| Util.hexByteString id
+    , fieldView "id" <| Util.hexUint8 id
     , fieldView "s1" s1
     , fieldView "s2" s2
     ]

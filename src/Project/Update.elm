@@ -8,12 +8,14 @@ import Process
 import Task
 
 import Alert
-import Bank
+import Bank exposing (Index(..))
+import Bank.Shuffle
 import Browser.Dom
 import ByteArray exposing (ByteArray)
 import Elektron.Digitakt.HighLevel as DT
 import Elektron.Digitakt.Related as DT
 import Elektron.Digitakt.Verify as DT
+import Elektron.Digitakt.Shuffle
 import Elektron.Digitakt.Types as DT
 import Elektron.Drive as Drive exposing (Drive)
 import Job exposing (Job, Step(..))
@@ -94,7 +96,12 @@ adjustSelection selection model =
 updateProject : (DT.Project -> DT.Project) -> Model -> Model
 updateProject fProj model =
   adjustSelection Sel.initSelection
-    { model | project = DT.rebuildCrossReference <| fProj model.project }
+    { model
+    | project =
+        DT.rebuildCrossReference
+        <| DT.updateSampleNames model.extraFileNames
+        <| fProj model.project
+    }
 
 makeEmptyProject : Model -> DT.Project
 makeEmptyProject model =
@@ -103,7 +110,8 @@ makeEmptyProject model =
 processDrop : Sel.DropInfo -> Model -> Model
 processDrop dropInfo model =
   let
-    reselect get set shuf = get >> List.filterMap (Bank.rereference shuf) >> set
+    reselect get set shuf =
+      get >> List.filterMap (Bank.Shuffle.rereference shuf) >> set
 
     reselectPatterns = reselect Sel.selectedPatterns Sel.selectPatterns
     reselectSamples = reselect Sel.selectedSamples Sel.selectSamples
@@ -114,10 +122,10 @@ processDrop dropInfo model =
         shuf =
           case dropInfo.dst of
             Nothing ->
-              Bank.nullShuffle  -- the destination was not valid (sample zero)
+              Bank.Shuffle.nullShuffle  -- the destination was not valid
             Just dst ->
-              Bank.dragAndDrop
-                DT.isEmptyItem
+              Elektron.Digitakt.Shuffle.dragAndDrop
+                (shuffleSpec dropInfo.kind model)
                 (List.map Bank.Index dropInfo.srcs)
                 (Bank.Index dst)
                 (bankFn model.project)
@@ -150,10 +158,13 @@ validateProject verb origin drive project0 pr model =
     (userMessage, ok) = DT.validateProject project
     action = verb ++ " " ++ origin
 
-    dispFn disp =
+    dispFn disp m =
       case disp of
-        LoadProject -> updateProject (always project) >> undoable action
-        StartImport -> \m ->
+        LoadProject ->
+          { m | samplePoolOffset = 0 }
+          |> updateProject (always project) 
+          |> undoable action
+        StartImport ->
           { m | importing = Just <| Import.init origin m.project project }
 
     nameFn name m = { m | projectName = name }
@@ -389,6 +400,7 @@ update msg drive model =
     ClearProject ->
       returnM
         (updateProject (\_ -> makeEmptyProject model) model
+        |> (\m -> { m | samplePoolOffset = 0 } )
         |> undoable "Clear project"
         )
 
@@ -559,14 +571,32 @@ update msg drive model =
 
     CompactItems k ->
       let
-        compact = Bank.compactDown DT.isEmptyItem
+        compact = Elektron.Digitakt.Shuffle.compactDown (shuffleSpec k model)
 
-        compactPatterns p = DT.shufflePatterns (compact 0 p.patterns) p
-        compactSamples p = DT.shuffleSamples (compact 1 p.samplePool) p
-        compactSounds p = DT.shuffleSounds (compact 0 p.soundPool) p
+        compactPatterns p = DT.shufflePatterns (compact p.patterns) p
+        compactSamples p = DT.shuffleSamples (compact p.samplePool) p
+        compactSounds p = DT.shuffleSounds (compact p.soundPool) p
 
         model_ =
           undoable ("Compact " ++ bankName k)
+          <| case k of
+            KPattern -> updateProject compactPatterns model
+            KSample -> updateProject compactSamples model
+            KSound -> updateProject compactSounds model
+        cmd_ = focus (bankId k)
+      in
+        returnMC model_ cmd_
+
+    SortItems k ->
+      let
+        sort = Elektron.Digitakt.Shuffle.sort .name (shuffleAllSpec k model)
+
+        compactPatterns p = DT.shufflePatterns (sort p.patterns) p
+        compactSamples p = DT.shuffleSamples (sort p.samplePool) p
+        compactSounds p = DT.shuffleSounds (sort p.soundPool) p
+
+        model_ =
+          undoable ("Sort " ++ bankName k)
           <| case k of
             KPattern -> updateProject compactPatterns model
             KSample -> updateProject compactSamples model

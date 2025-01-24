@@ -200,7 +200,7 @@ hexDump : ByteArray -> String
 hexDump ba =
   let
     hexAt i = case get i ba of
-      Just b -> String.cons ' ' <| Util.hexByteString b
+      Just b -> String.cons ' ' <| Util.hexUint8 b
       Nothing -> "   "
     hexLine i =
       List.map hexAt (List.range i (i+7))
@@ -209,8 +209,7 @@ hexDump ba =
     asciiLine i = String.fromList <| List.map (asciiAt ba) <| List.range i (i+15)
 
     line addr = String.concat
-      <| [ Util.hexByteString (addr // 256)
-         , Util.hexByteString (modBy 256 addr)
+      <| [ Util.hexUint16 addr
          , ": "
          ]
         ++ hexLine addr
@@ -237,7 +236,7 @@ elmIntList ba =
   let
     addr i = String.padLeft 4 ' ' <| String.fromInt i
     hexAt i = case get i ba of
-      Just b -> ", 0x" ++ Util.hexByteString b
+      Just b -> ", 0x" ++ Util.hexUint8 b
       Nothing -> "      "
     hex i = String.concat <| List.map hexAt <| List.range i (i+7)
     hexFix i = if i == 0

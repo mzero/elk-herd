@@ -191,7 +191,7 @@ type alias SelectionUpdater i = Selection i -> Selection i
 
 
 mouseDown : Index i -> Bool -> MouseEvent -> SelectionUpdater i
-mouseDown i empty event ((Selection s) as sel) =
+mouseDown i occupied event ((Selection s) as sel) =
   let
     alreadySelected = s.mode == Select && isSelected i sel
     basis = s.selection
@@ -202,16 +202,16 @@ mouseDown i empty event ((Selection s) as sel) =
         (True, _) -> extend
         (False, True) -> s.action
         (False, False) ->
-          if empty
+          if occupied
             then
-              case s.style of
-                SelectExtend -> NoAction
-                _ -> Deselecting
-            else
               case s.style of
                 SelectOnly -> Selecting i
                 SelectWithDrag -> SelectOrDrag i event.xy
                 SelectExtend -> extend
+            else
+              case s.style of
+                SelectExtend -> NoAction
+                _ -> Deselecting
 
     wait =
       case action of
@@ -248,7 +248,7 @@ Therefore, this code relies on mouseEnter/Leave to track the last valid (or not)
 place the mouse was, and so to know where the user released the mosue.
 
 mouseUp : Index i -> Bool -> MouseEvent -> SelectionUpdater i
-mouseUp i empty event ((Selection s) as sel) =
+mouseUp i occupied event ((Selection s) as sel) =
   case s.mode of
     Select ->
       let
@@ -289,12 +289,11 @@ mouseUpGlobal (Selection s) =
     _ -> Selection { s | active = False }
 
 mouseEnter : Index i -> Bool -> SelectionUpdater i
-mouseEnter i empty ((Selection s) as sel) =
+mouseEnter i occupied ((Selection s) as sel) =
   case s.mode of
     Hover ->
-      if empty
-        then sel
-        else
+      if occupied
+        then
           Selection
             { s
             | mode = Hover
@@ -302,6 +301,7 @@ mouseEnter i empty ((Selection s) as sel) =
             , active = False
             , action = NoAction
             }
+        else sel
     Select ->
       if s.active
         then Selection { s | selection = act s.action i s.selection }
@@ -311,7 +311,7 @@ mouseEnter i empty ((Selection s) as sel) =
     _ -> sel
 
 mouseLeave : Index i -> Bool -> SelectionUpdater i
-mouseLeave i empty ((Selection s) as sel) =
+mouseLeave i occupied ((Selection s) as sel) =
   case s.mode of
     Hover -> init s.style
     Drag xy _ ->
@@ -360,17 +360,17 @@ isMouseDown msg =
 update : Msg i -> Selection i -> Selection i
 update msg =
   case msg of
-    MouseDownOn i empty event -> mouseDown i empty event
-    MouseEnter i empty        -> mouseEnter i empty
-    MouseLeave i empty        -> mouseLeave i empty
-    MouseUpGlobal             -> mouseUpGlobal
-    MouseUpdate event         -> mouseUpdate event
+    MouseDownOn i occupied event  -> mouseDown i occupied event
+    MouseEnter i occupied         -> mouseEnter i occupied
+    MouseLeave i occupied         -> mouseLeave i occupied
+    MouseUpGlobal                 -> mouseUpGlobal
+    MouseUpdate event             -> mouseUpdate event
 
 itemHandlers : Index i -> Bool -> List (Html.Attribute (Msg i))
-itemHandlers i empty =
-  [ Events.onMouseDownExtended (MouseDownOn i empty)
-  , Events.onMouseEnter (MouseEnter i empty)
-  , Events.onMouseLeave (MouseLeave i empty)
+itemHandlers i occupied =
+  [ Events.onMouseDownExtended (MouseDownOn i occupied)
+  , Events.onMouseEnter (MouseEnter i occupied)
+  , Events.onMouseLeave (MouseLeave i occupied)
   ]
 
 subscriptions : Selection i -> Sub (Msg i)

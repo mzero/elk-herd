@@ -13,7 +13,8 @@ import Html
 import Html.Attributes as Attr
 import Html.Events as Events
 
-import Bank exposing (Index(..), Bank, BankOf, Shuffle)
+import Bank exposing (Index(..), Bank, BankOf)
+import Bank.Shuffle as Shuffle exposing (Shuffle)
 import Bank.IndexSet as IndexSet exposing (IndexSet)
 import Elektron.Digitakt.HighLevel as DT exposing (Project, Shuffles)
 import Elektron.Digitakt.Related as Rel
@@ -112,12 +113,12 @@ findExisting baseProj sourceProj =
 
     items =
       { patterns = IndexSet.empty
-      , samples = IndexSet.fromList <| Bank.shuffleSources sampleShuf
-      , sounds = IndexSet.fromList <| Bank.shuffleSources soundShuf
+      , samples = IndexSet.fromList <| Shuffle.shuffleSources sampleShuf
+      , sounds = IndexSet.fromList <| Shuffle.shuffleSources soundShuf
       }
 
     shufs =
-      { patterns = Bank.nullShuffle     -- patterns are never considered the same
+      { patterns = Shuffle.nullShuffle     -- patterns are never considered the same
       , samples = sampleShuf
       , sounds = soundShuf
       }
@@ -131,7 +132,7 @@ nonEmptySelection sel bank =
     nonEmpty i =
       case Bank.get i bank of
         Nothing -> False
-        Just a -> not (DT.isEmptyItem a)
+        Just a -> DT.isOccupiedItem a
   in
     BSel.selected sel |> IndexSet.filter nonEmpty
 
@@ -251,7 +252,7 @@ performImport model =
   let
     buildShuffle : IndexSet a -> IndexSet a -> Shuffle a
     buildShuffle from to =
-      Bank.importShuffle
+      Shuffle.asImport
         <| List.map2 Tuple.pair
           (IndexSet.toList from)
           (IndexSet.toList <| findBlock (IndexSet.size from) to)
@@ -318,12 +319,14 @@ view model =
         name = Maybe.unwrap "" .name mItem
         empty = Maybe.unwrap True DT.isEmptyItem mItem
         phantom = Maybe.unwrap False DT.isPhantomItem mItem
+        occupied = Maybe.unwrap False DT.isOccupiedItem mItem
+        zero = k == KSample && DT.isZeroSampleIndex (Index i)
       in
         Html.div
           ( [ Attr.class "bank-item"
             , Attr.classList
               [ ("empty", empty)
-              , ("zero", i == 0)
+              , ("zero", zero)
               , ("phantom", phantom)
               , ("selected",   isInItems k i model.selected)
               , ("referenced", isInItems k i model.referenced)
@@ -332,7 +335,7 @@ view model =
             ]
             ++ List.map
                 (Attr.map SelectionMsg)
-                (Sel.itemHandlers k i empty)
+                (Sel.itemHandlers k i occupied)
           )
           [ Html.span [ Attr.class "bank-label" ] [ Html.text (slotLabel k i) ]
           , Html.span [ Attr.class "bank-name" ]  [ Html.text name ]

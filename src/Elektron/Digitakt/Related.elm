@@ -241,7 +241,9 @@ buildCrossReference patterns samplePool soundPool =
           <| List.map Array.toList
           <| Array.toList pattern.soundPlocks
         samp3 = List.filterMap soundSample sounds
-        samples = samp1 ++ samp2 ++ samp3
+        samples =
+          List.filter (isZeroSampleIndex >> not)
+          <| samp1 ++ samp2 ++ samp3
       in
         (asRelationArray samples, asRelationArray sounds)
 
@@ -255,9 +257,9 @@ buildCrossReference patterns samplePool soundPool =
         (\(i, mPattern) ->
           mPattern
           |> Maybe.andThen (\p ->
-            if isEmptyItem p
-              then Nothing
-              else Just (patternRelations p)
+            if isOccupiedItem p
+              then Just (patternRelations p)
+              else Nothing
             )
           |> Maybe.withDefault (emptyRelationArray, emptyRelationArray)
         )
@@ -320,10 +322,6 @@ soundHasNoRelations : Related -> Bool
 soundHasNoRelations (Related r) =
   isEmptyRelationArray r.patterns
 
-{-| Treated specially by the instrument, as it is always empty.
--}
-isSampleZero : Index Sample -> Bool
-isSampleZero (Index i) = i == 0
 
 isFree : (Related -> Bool) -> Bank i Related -> Index i -> Bool
 isFree hasNoRelations relBank idx =
@@ -337,12 +335,9 @@ unrelatedItems hasNoRelations itemBank relBank =
     test pair =
       case pair of
         (idx, Just a) ->
-          if isEmptyItem a
-            then Nothing
-            else
-              if isFree hasNoRelations relBank idx
-                then Just idx
-                else Nothing
+          if isOccupiedItem a && isFree hasNoRelations relBank idx
+            then Just idx
+            else Nothing
         _ -> Nothing
   in
     Bank.toIndexedList itemBank |> List.filterMap test
@@ -367,7 +362,7 @@ unusedPatterns bank cr = []
 unusedSamples : BankOf Sample -> CrossReference -> List (Index Sample)
 unusedSamples bank cr =
   unrelatedItems sampleHasNoRelations bank cr.sampleRelated
-  |> List.filter (isSampleZero >> not)
+  |> List.filter (isZeroSampleIndex >> not)
 
 unusedSounds : BankOf Sound -> CrossReference -> List (Index Sound)
 unusedSounds bank cr =
@@ -378,7 +373,7 @@ freePattern idx cr = True
 
 freeSample : Index Sample -> CrossReference -> Bool
 freeSample idx cr =
-  not (isSampleZero idx)
+  not (isZeroSampleIndex idx)
   && isFree sampleHasNoRelations cr.sampleRelated idx
 
 freeSound : Index Sound -> CrossReference -> Bool

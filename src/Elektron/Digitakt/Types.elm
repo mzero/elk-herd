@@ -3,12 +3,13 @@ module Elektron.Digitakt.Types exposing
   , BankItem
   , isEmptyItem
   , isPhantomItem
+  , isOccupiedItem
   , onNonEmpty
-
   , Pattern
   , Sample
   , Sound
 
+  , isZeroSampleIndex
   , sampleHashSize
   , updateSampleName
 
@@ -49,8 +50,11 @@ In addition there are entries that fall into limbo: The instrucment treats
 them as empty, but in fact they have user content in them. For example, a
 pattern that has no trigs, and no name, but has user assign kit settings.
 These are marked as `Phantom`.
+
+Zero items are the "0" entries on each page of the Sample Pool. These are
+unassignable & unmoveable.
 -}
-type Status = Empty | Phantom | Live
+type Status = Zero | Empty | Phantom | Live
 type alias BankItem a = { a | status : Status, name : String }
 
 isEmptyItem : BankItem a -> Bool
@@ -58,6 +62,14 @@ isEmptyItem a = a.status == Empty
 
 isPhantomItem : BankItem a -> Bool
 isPhantomItem a = a.status == Phantom
+
+isOccupiedItem : BankItem a -> Bool
+isOccupiedItem a = a.status == Live || a.status == Phantom
+
+isZeroSampleIndex : Index Sample -> Bool
+isZeroSampleIndex (Index i) = modBy 128 i == 0
+
+
 
 onNonEmpty : (BankItem a -> BankItem a) -> BankItem a -> BankItem a
 onNonEmpty f item =
@@ -219,14 +231,20 @@ buildPatternFromDump dPatternKit =
     , binary = dPatternKit
     }
 
-buildSampleFromDump : Dump.Sample -> Sample
-buildSampleFromDump dSample =
+buildSampleFromDump : Int -> Dump.Sample -> Sample
+buildSampleFromDump i dSample =
   let
-    empty = Dump.isEmptySample dSample
+    (name, status) =
+      if isZeroSampleIndex (Index i)
+        then ("off", Zero)
+        else
+          if Dump.isEmptySample dSample
+            then ("", Empty)
+            else ("???", Live)
   in
-    { name = if empty then "" else "???"
-    , status = if empty then Empty else Live
-    , needsName = not empty
+    { name = name
+    , status = status
+    , needsName = status == Live
     , binary = dSample
     }
 

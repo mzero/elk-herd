@@ -205,7 +205,7 @@ arrayHex n pa =
 {-| A field that always has a constant, magic value.
 -}
 magic : Int -> Part Int
-magic x = const x ("magic " ++ Util.hexBytesString x) uint32be
+magic x = const x ("magic " ++ Util.hexUint32 x) uint32be
 
 magicHead : Part Int
 magicHead = magic 0xbeefbace

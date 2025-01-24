@@ -12,7 +12,7 @@ and the current page filling the primary area.
 -}
 
 import Html exposing (div, text)
-import Html.Attributes as Attr exposing (class)
+import Html.Attributes as Attr
 import Html.Events as Events
 import Markdown
 
@@ -57,10 +57,10 @@ instrumentView mInst = case mInst of
   Nothing -> div [] []
 
 
-pageDescriptors : List (Page, String)
+pageDescriptors : List (Page, String, String)
 pageDescriptors =
-  [ (SamplesPage, "Samples")
-  , (ProjectPage, "Project")
+  [ (SamplesPage, "Samples", "page-samples")
+  , (ProjectPage, "Project", "page-project")
   ]
 
 
@@ -90,31 +90,33 @@ mainView page model =
           <| model.projectModel
 
     row left right =
-      div [ class "row" ]
-        [ div [ class "col-3" ] left
-        , div [ class "col-9" ] right
+      div [ Attr.class "row" ]
+        [ div [ Attr.id "page-left", Attr.class "col-2 col-lg-3" ] left
+        , div [ Attr.id "page-right", Attr.class "col" ] right
         ]
 
-    pageNavItem (p, s) =
+    pageNavItem (p, s, id) =
       Html.button
         [ Attr.class "btn btn-outline-dark"
         , Attr.classList [ ("active", p == page) ]
+        , Attr.id id
         , Events.onClick (GoToScreen (MainScreen p))
         ]
-        [ Html.text s
+        [ Html.span [ Attr.class "page-icon d-inline-block d-lg-none" ] [ ]
+        , Html.span [ Attr.class "page-text d-none d-lg-inline" ] [ Html.text s ]
         ]
 
     pagePanel =
       if hasProjectPage
         then
           div [ Attr.id "page-panel" ]
-            [ div [ Attr.class "btn-group" ]
+            [ div [ Attr.class "btn-group w-75" ]
                 (List.map pageNavItem pageDescriptors)
             ]
         else
           div [] []
   in
-    div [ Attr.id "main-view", class "container" ]
+    div [ Attr.id "main-view", Attr.class "container" ]
       [ row
           [ pagePanel
           , div [ Attr.id "cmd-panel" ]
@@ -168,11 +170,11 @@ titlebarMiddle model =
 
 titlebar : Html.Html msg -> Html.Html msg
 titlebar middle =
-  Html.nav [ Attr.id "titlebar", class "bg-dark" ]
+  Html.nav [ Attr.id "titlebar", Attr.class "bg-dark" ]
     [
       div [ Attr.class "left" ]
         [ div [ Attr.id "titlebar-app" ]
-          [ Html.span [ class "text-warning"] [ text "crunch/" ]
+          [ Html.span [ Attr.class "text-warning"] [ text "crunch/" ]
           , text "elk-herd"
           ]
         , div [ Attr.id "titlebar-elk"] []

@@ -68,4 +68,4 @@ arrayIntTable : Int -> Array Int -> Html.Html msg
 arrayIntTable = arrayTable (Html.text << String.fromInt)
 
 arrayHexTable : Int -> Array Int -> Html.Html msg
-arrayHexTable = arrayTable (Html.text << Util.hexBytesString)
+arrayHexTable = arrayTable (Html.text << Util.hexUint8)

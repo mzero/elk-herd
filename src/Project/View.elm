@@ -9,8 +9,10 @@ import Html.Events as Events
 
 import Alert
 import Bank exposing (BankOf, Index(..))
+import Bank.Shuffle as Shuffle
 import Commands as C
 import Elektron.Digitakt.HighLevel as DT
+import Elektron.Digitakt.Shuffle exposing (dragAndDrop)
 import Elektron.Digitakt.Types as DT
 import Html.Aria as Aria
 import Missing.Html.Events as Events
@@ -21,7 +23,6 @@ import Project.Import as Import
 import Project.Selection.Project as Sel
 import Project.Util exposing (..)
 import Undo
-import Elektron.Digitakt.Types exposing (Sample)
 
 
 commands : Model -> C.Commands Msg
@@ -163,12 +164,19 @@ sectionToolBar label k editing sel =
               , msg = RenameItem
               }
           ]
-        , [ buttonIfNot KPattern
+        , [ button
               { title = "Compact Items"
               , text = "\u{2AE9}"  -- tack thing
               , active = False
               , enable = True
               , msg = CompactItems
+              }
+          , button
+              { title = "Sort Items"
+              , text = "\u{1D2C}z"  -- small raised upper case A
+              , active = False
+              , enable = True
+              , msg = SortItems
               }
           ]
         , [ button
@@ -189,13 +197,19 @@ bankSelector model k =
         start = n * 128
         end = start + 127
         range = List.range start end
-        itemEmpty i = Bank.get (Index i) model.project.samplePool |> Maybe.unwrap True DT.isEmptyItem
+        itemOccupied i = Bank.get (Index i) model.project.samplePool
+          |> Maybe.unwrap False DT.isOccupiedItem
         itemStatus i = Sel.itemStatus k i model.selection model.related
-        empty = List.all itemEmpty range
+        empty = not <| List.any itemOccupied range
         status = List.foldl (\i b -> if b == Sel.Plain then itemStatus i else b) Sel.Plain range
+
+        onDragEvents =
+          if Sel.kindStatus k model.selection == Sel.Dragged
+            then [Events.onMouseEnter (SetSamplePoolOffset start)]
+            else []
       in
         Html.button
-          [ Attr.class "btn btn-light btn-sm"
+          ([ Attr.class "btn btn-light btn-sm"
           , Attr.classList
               [ ("active", (model.samplePoolOffset == start))
               , ("empty", empty)
@@ -207,6 +221,8 @@ bankSelector model k =
           , Attr.disabled False
           , Events.onClick (SetSamplePoolOffset start)
           ]
+          ++ onDragEvents
+          )
           [ Html.text <| String.slice n (n + 1) "ABCDEFGHI" ]
   in
   case k of
@@ -234,6 +250,8 @@ view model =
         name = Maybe.unwrap "" .name mItem
         empty = Maybe.unwrap True DT.isEmptyItem mItem
         phantom = Maybe.unwrap False DT.isPhantomItem mItem
+        occupied = Maybe.unwrap False DT.isOccupiedItem mItem
+        zero = k == KSample && DT.isZeroSampleIndex (Index i)
         status =
           case mSrc of
             Nothing -> Sel.Plain
@@ -245,7 +263,7 @@ view model =
             , Attr.class "bank-item"
             , Attr.classList
               [ ("empty", empty)
-              , ("zero", modBy 128 i == 0)
+              , ("zero", zero)
               , ("phantom", phantom)
               , ("selected", status == Sel.Selected)
               , ("dragged", status == Sel.Dragged)
@@ -255,7 +273,7 @@ view model =
             ]
             ++ List.map
                 (Attr.map (SelectionItemMsg k i))
-                (Sel.itemHandlers k i empty)
+                (Sel.itemHandlers k i occupied)
           )
           <| if doEdit
             then
@@ -320,9 +338,10 @@ view model =
                     Just dst ->
                       let
                         srcs = List.map Index di.srcs
-                        shuffle = Bank.dragAndDrop DT.isEmptyItem srcs (Index dst) bank
+                        spec = shuffleSpec k model
+                        shuffle = dragAndDrop spec srcs (Index dst) bank
                       in
-                        (\idx -> Bank.source shuffle idx)
+                        (\idx -> Shuffle.source shuffle idx)
                     Nothing -> Just
                 Nothing -> Just
             else
