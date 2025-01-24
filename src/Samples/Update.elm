@@ -15,6 +15,7 @@ import Time
 import Alert
 import ByteArray exposing (ByteArray)
 import Elektron.Drive as Drive exposing (Drive)
+import Elektron.Instrument as EI
 import Elektron.Path as Path exposing (Path)
 import Missing.Html.Events as Events
 import Missing.List as List
@@ -174,7 +175,7 @@ bumpQueue = withModel <| \model ->
             QAReadFile path name ->
               bumpPump <| startRead (Path.pathString path)
             QAWriteFile path fileName v ->
-              addCmd <| Portage.readAudioFile v
+              addCmd <| Portage.readAudioFile (EI.supportsStereo model.instrument, v)
         in
           updateModel (\m -> { m | queue = Just q_ })
           >> uact
@@ -501,7 +502,7 @@ updateRecvResponseFail msg = withModel <| \model ->
 update : Msg -> Model -> (Model, Cmd Msg, Requests Msg)
 update outerMsg model = run model <| case outerMsg of
   KickOff ->
-    updateModel (\m -> init m.debug)
+    updateModel reset
     >> Ops.bumpScanDrive
     >> enqueue [ QAListDir True Path.rootPath ]
     >> showProgress "Scan +Drive" False

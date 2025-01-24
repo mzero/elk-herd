@@ -107,7 +107,9 @@ var hookup_ports = function(app, report_url) {
   });
 
 
-  subscribe("readAudioFile", function(file) {
+  subscribe("readAudioFile", function(e) {
+    let stereoSupported = e[0];
+    let file = e[1];
     let name = file.name;
 
     let reportError = function(err) {
@@ -121,26 +123,46 @@ var hookup_ports = function(app, report_url) {
         let ctx = new OfflineAudioContext(1, 48000, 48000);
 
         ctx.decodeAudioData(reader.result).then(function(buffer){
-          let floatSamples = buffer.getChannelData(0);
-          let nSamples = floatSamples.length;
-          let sampleBytes = 2 * nSamples;
+
+          let srcStereo = buffer.numberOfChannels == 2;
+          let dstStereo = srcStereo && stereoSupported;
+
+          let nSamples = buffer.length;
+
+          let floatSamples0 = buffer.getChannelData(0);
+          let floatSamples1 = null;
+          if (dstStereo) {
+            floatSamples1 = buffer.getChannelData(1);
+          }
+
+          let frameSize = dstStereo ? 4 : 2;
+          let sampleBytes = nSamples * frameSize;
 
           let fileBuffer = new ArrayBuffer(64 + sampleBytes);
 
           let header = new DataView(fileBuffer, 0, 64);
-          header.setUint8(  0, 0);            // type
-          header.setUint32( 4, sampleBytes);  // sample data length in bytes
-          header.setUint32( 8, 48000);        // sample rate
-          header.setUint32(12, 0);            // first sample index
-          header.setUint32(16, nSamples-1);   // last sample index
-          header.setUint8( 20, 0x7f);         // loop type (= no loop)
+          header.setUint8(  0, 0);                // type
+          header.setUint8(  1, dstStereo ? 1 : 0);// stereo
+          header.setUint32( 4, sampleBytes);      // sample data length in bytes
+          header.setUint32( 8, 48000);            // sample rate
+          header.setUint32(12, 0);                // first sample index
+          header.setUint32(16, nSamples-1);       // last sample index
+          header.setUint8( 20, 0x7f);             // loop type (= no loop)
 
           let samples = new DataView(fileBuffer, 64, sampleBytes);
-          for (let iv of floatSamples.entries()) {
+          for (let iv of floatSamples0.entries()) {
             let i = iv[0]
             let v = Math.floor(iv[1] * 32767.5);
 
-            samples.setInt16(i*2, v);
+            samples.setInt16(i*frameSize, v);
+          }
+          if (dstStereo) {
+            for (let iv of floatSamples1.entries()) {
+              let i = iv[0]
+              let v = Math.floor(iv[1] * 32767.5);
+
+              samples.setInt16(i*frameSize+2, v);
+            }
           }
 
           let chunks = [];
@@ -183,6 +205,7 @@ var hookup_ports = function(app, report_url) {
 
     let header = new DataView(fileBuffer, 0, 64);
     const sampleType        = header.getUint8(  0);
+    const sampleStereo      = header.getUint8(  1) == 1;
     const sampleBytes       = header.getUint32( 4);
     const sampleRate        = header.getUint32( 8);
     const firstSampleIndex  = header.getUint32(12);
@@ -191,6 +214,7 @@ var hookup_ports = function(app, report_url) {
 
     // console.log("read samples for", name);
     // console.log("sampleType", sampleType);
+    // console.log("sampleStereo", sampleStereo);
     // console.log("sampleBytes", sampleBytes);
     // console.log("sampleRate", sampleRate);
     // console.log("firstSampleIndex", firstSampleIndex);
@@ -201,6 +225,7 @@ var hookup_ports = function(app, report_url) {
     const fmtChunkLen = 16;
     const riffChunkLen = 4 + (8 + fmtChunkLen) + (8 + dataChunkLen);
     const wavFileLen = 8 + riffChunkLen;
+    const nChannels = sampleStereo ? 2 : 1;
 
     let wavHeader = new DataView(fileBuffer, 20, 44);
     let setTag = function(o, tag) {
@@ -216,9 +241,10 @@ var hookup_ports = function(app, report_url) {
               setTag(   12, 'fmt ');
     wavHeader.setUint32(16, fmtChunkLen,      true);
     wavHeader.setUint16(20, 1,                true);  // format PCM
-    wavHeader.setUint16(22, 1,                true);  // num channels
+    wavHeader.setUint16(22, nChannels,        true);  // num channels
     wavHeader.setUint32(24, sampleRate,       true);
-    wavHeader.setUint32(28, 2 * sampleRate,   true);  // byte rate
+    wavHeader.setUint32(28, 2 * sampleRate * nChannels,
+                                              true);  // byte rate
     wavHeader.setUint16(32, 2,                true);  // block align
     wavHeader.setUint16(34, 16,               true);  // bits per sample
               setTag(   36, 'data');
@@ -249,6 +275,7 @@ var hookup_ports = function(app, report_url) {
         entry.file(function(file) {
           send("droppedFile", [path_, file]);
         });
+        // N.B.: This will fail here if index.html is loaded from a file
       }
       if (entry.isDirectory) {
         entry.createReader().readEntries(function(subEntries) {

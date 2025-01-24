@@ -27,10 +27,14 @@ import WebMidi
 
 type alias AppSettings =
   { reportingOptIn : Bool
+  , flags : List String
   }
 
-initAppSettings : AppSettings
-initAppSettings = { reportingOptIn = True }
+initAppSettings : String -> AppSettings
+initAppSettings flagsString =
+  { reportingOptIn = True
+  , flags = String.split "," flagsString
+  }
 
 {-| Which view of the instrument the user is active.
 Somewhat misnamed: Should be "Panel" or "Tab" or "Section" or ???
@@ -52,8 +56,9 @@ type FileDisposition = FileUnexpected | FileLoad | FileImport
 
 type alias Model =
   { appSettings : AppSettings
+
   , screen : Screen
-  , samplesModel : Samples.Model
+  , samplesModel : Maybe Samples.Model
   , projectModel : Maybe Project.Model
 
   , alertModel : Alert.Model
@@ -68,17 +73,17 @@ alert : Alert.Level -> String -> String -> Model -> Model
 alert lvl s1 s2 model = { model | alertModel = Alert.alert lvl s1 s2 }
 
 init : String -> Model
-init flags =
+init flagsString =
   let
-    debugFlags = String.split "," flags
+    appSettings = initAppSettings flagsString
   in
-    { appSettings = initAppSettings
+    { appSettings = appSettings
     , screen = SplashScreen
-    , samplesModel = Samples.init (List.member "samples" debugFlags)
+    , samplesModel = Nothing
     , projectModel = Nothing
     , alertModel = Alert.noAlert
     , webMidiModel = WebMidi.init
-    , sysExModel = SysEx.init (List.member "slow" debugFlags)
+    , sysExModel = SysEx.init (List.member "slow" appSettings.flags)
     , connectModel = SysEx.Connect.init
     , fileDisposition = FileUnexpected
   }

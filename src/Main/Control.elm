@@ -44,7 +44,12 @@ prepForMain model0 =
 
     prepSamples inst model =
       if EI.hasDriveSamples inst
-        then onSamplesUpdate (Samples.kickOff model.samplesModel) model
+        then
+          let
+            debugSamples = List.member "samples" model.appSettings.flags
+            samplesModel = Samples.init inst debugSamples
+          in
+          onSamplesUpdate (Samples.kickOff samplesModel) model
         else (model, Cmd.none)
   in
     SysEx.Connect.instrument model0.connectModel
@@ -68,7 +73,7 @@ onSamplesUpdate :
   (Samples.Model, Cmd Samples.Msg, SysEx.Client.Requests Samples.Msg)
   -> Model -> (Model, Cmd Msg)
 onSamplesUpdate (samplesModel_, cmd, reqs) model =
-  makeSysExRequests OnSamples reqs { model | samplesModel = samplesModel_ }
+  makeSysExRequests OnSamples reqs { model | samplesModel = Just samplesModel_ }
     <| Cmd.map OnSamples cmd
 
 
@@ -84,7 +89,11 @@ update : Msg -> Model -> (Model, Cmd Msg)
 update msg model =
   case msg of
     OnSamples sMsg ->
-      onSamplesUpdate (Samples.update sMsg model.samplesModel) model
+      case model.samplesModel of
+        Just sm ->
+         onSamplesUpdate (Samples.update sMsg sm) model
+        Nothing ->
+          ( model, Cmd.none )
 
     OnProject pMsg ->
       case model.projectModel of
@@ -235,7 +244,9 @@ subscriptions model =
     pageSubs =
       case model.screen of
         MainScreen SamplesPage ->
-          Sub.map OnSamples <| Samples.subscriptions model.samplesModel
+          Maybe.unwrap Sub.none
+          (Sub.map OnSamples << Samples.subscriptions)
+          model.samplesModel
 
         MainScreen ProjectPage ->
           Maybe.unwrap Sub.none
