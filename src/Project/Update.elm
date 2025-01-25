@@ -75,6 +75,30 @@ showAlert alert model =
     (focus "project-alert")
 
 
+adjustSamplePoolOffset : Model -> Model
+adjustSamplePoolOffset model =
+  let
+    offset = model.samplePoolOffset
+    lo = offset
+    hi = offset + 127
+
+    makeVisible idxs =
+      if List.any (\(Index i) -> lo <= i && i <= hi) idxs
+        then offset
+        else
+          case List.minimum <| List.map (\(Index i) -> i) idxs of
+            Nothing -> offset
+            Just j  -> j // 128 * 128
+
+    adjustment =
+      case Sel.selectedKind model.selection of
+          Nothing      -> offset
+          Just KSample -> makeVisible (Sel.selectedSamples model.selection)
+          Just _       -> makeVisible (DT.relatedSamples model.related)
+  in
+    { model | samplePoolOffset = adjustment }
+
+
 adjustSelection : Sel.Selection -> Model -> Model
 adjustSelection selection model =
   let
@@ -509,6 +533,7 @@ update msg drive model =
       let
         model_ =
           adjustSelection (Sel.selectRelated k model.related) model
+          |> (if k == KSample then adjustSamplePoolOffset else identity)
           |> undoable ("Select Related " ++ bankName k)
         cmd_ = focus (bankId k)
       in
@@ -529,6 +554,7 @@ update msg drive model =
 
         model_ =
           adjustSelection sel model
+          |> (if k == KSample then adjustSamplePoolOffset else identity)
           |> undoable ("Select Unused " ++ bankName k)
         cmd_ = focus (bankId k)
       in
@@ -591,16 +617,16 @@ update msg drive model =
       let
         sort = Elektron.Digitakt.Shuffle.sort .name (shuffleAllSpec k model)
 
-        compactPatterns p = DT.shufflePatterns (sort p.patterns) p
-        compactSamples p = DT.shuffleSamples (sort p.samplePool) p
-        compactSounds p = DT.shuffleSounds (sort p.soundPool) p
+        sortPatterns p = DT.shufflePatterns (sort p.patterns) p
+        sortSamples p = DT.shuffleSamples (sort p.samplePool) p
+        sortSounds p = DT.shuffleSounds (sort p.soundPool) p
 
         model_ =
           undoable ("Sort " ++ bankName k)
           <| case k of
-            KPattern -> updateProject compactPatterns model
-            KSample -> updateProject compactSamples model
-            KSound -> updateProject compactSounds model
+            KPattern -> updateProject sortPatterns model
+            KSample -> updateProject sortSamples { model | samplePoolOffset = 0 }
+            KSound -> updateProject sortSounds model
         cmd_ = focus (bankId k)
       in
         returnMC model_ cmd_
