@@ -49,6 +49,7 @@ import Time
 import Build
 import ByteArray exposing (ByteArray)
 import Commands as C
+import Missing.Maybe as Maybe
 import Missing.Time as Time
 import Portage
 import SysEx.Client exposing (..)
@@ -105,6 +106,35 @@ startMsgId = 20000  -- try to stay out of Transfer's way
 bumpMsgId : Int -> Int
 bumpMsgId n = if n < 65535 then n + 1 else startMsgId
 
+debugSysEx : Bool -> Direction -> SysEx -> Debug.Model -> Debug.Model
+debugSysEx forceShow direction sysEx debug =
+  let
+    show =
+      case sysEx of
+        -- match things here that should always be debugged
+        ElektronAPI { msg } ->
+          case msg of
+            -- M.SampleFileInfoRequest _ _ -> True
+            -- M.SampleFileInfoResponse _ _ _ _ -> True
+            _ -> False
+        _ -> False
+
+    extra _ =
+      case sysExToBytes sysEx of
+        RawMidiBytes bs -> Just <| Undecoded "(last message)" bs
+        ElektronApiBytes bs ->
+          case sysEx of
+            ElektronAPI h -> Just <| ElektronAPI { h | msg = M.Unknown 0 bs }
+            _ -> Nothing
+
+    extraDebug _ = extra () |> Maybe.unwrap identity (Debug.addItem direction)
+  in
+    if forceShow || show
+      then
+        Debug.addItem direction sysEx debug
+        -- |> extraDebug ()    -- uncomment for a binary dump as well
+      else debug
+
 {-| See the comment in `SysEx.SysEx.SysExBytes` for why there are two ways to
 send MIDI.
 -}
@@ -119,7 +149,7 @@ sendMessage log message model =
   let
     msgId = model.nextMsgId
     sysEx = ElektronAPI { msgId = msgId, respId = Nothing, msg = message }
-    debug_ = (if log then Debug.addItem Sent sysEx else identity) model.debug
+    debug_ = debugSysEx log Sent sysEx model.debug
 
     (emulation1, sendCmd) = if Build.emulateDigitakt
       then
@@ -167,7 +197,7 @@ sendDumpRequest : ElkDump -> (ElkDump -> msgM) -> Model msgM -> (Model msgM, Cmd
 sendDumpRequest dump respF model =
   let
     sysEx = ElektronDump dump
-    debug_ = {- Debug.addItem Sent sysEx -} model.debug
+    debug_ = debugSysEx False Sent sysEx model.debug
     model_ = { model | dumpRespF = Just respF, debug = debug_ }
     cmd = sendSysEx sysEx
   in
@@ -223,11 +253,8 @@ recv sysEx model =
           then loopbackProbeResult True model
           else ignoreRecv {- some other MIDI message -}
 
-    debug_ =
-      -- only show received messages without an expected response handler
-      if List.isEmpty resps
-        then Debug.addItem Received sysEx model.debug
-        else model.debug
+    debug_ = debugSysEx (List.isEmpty resps) Received sysEx model.debug
+      -- always show received messages without an expected response handler
   in
    ( { model_ | debug = debug_ } , resps , cmd )
 
