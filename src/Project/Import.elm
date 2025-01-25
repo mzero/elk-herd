@@ -110,10 +110,7 @@ freeItems proj =
       |> IndexSet.fromList
   in
     { patterns = find proj.patterns
-    , samples =
-        IndexSet.diff
-          (find proj.samplePool)
-          (IndexSet.singleton (Index 0))
+    , samples = find proj.samplePool
     , sounds = find proj.soundPool
     }
 
@@ -220,64 +217,51 @@ checkImportable model =
     }
 
 
-findBlock : Int -> IndexSet a -> IndexSet a
-findBlock n idxs =
+lastOccupied : Bank i (DT.BankItem a) -> Maybe Int
+lastOccupied bank =
+  Bank.toIndexedList bank
+  |> List.foldl (\((Index i), ma) n ->
+      case ma of
+        Nothing -> n
+        Just a -> if DT.isOccupiedItem a then Just i else n
+    )
+    Nothing
+
+findDestination : Int -> Maybe Int -> IndexSet i -> IndexSet i
+findDestination n last empties =
   let
-    blockSize = 16
-    blockStarts = List.map ((*) blockSize) <| List.range 0 7
-
-    nBlocked = (n + blockSize - 1) // blockSize * blockSize
-
-    blockSet s =
-      IndexSet.fromList
-      <| List.map Index
-      <| List.map ((+) s)
-      <| List.range 0 (nBlocked - 1)
-
-    contiguous  i l =
-      case l of
-        [] -> [i]
-        j :: _ -> if i == j + 1 then i :: l else [i]
-
-    endSet =
-      IndexSet.fromList
-      <| List.map Index
-      <| List.reverse
-      <| List.foldl contiguous []
-      <| List.map Bank.indexToInt
-      <| IndexSet.toList idxs
-
-    go bs =
-      case bs of
-        b :: rest ->
-          if IndexSet.isSubset idxs (blockSet b)
-            then blockSet b
-            else go rest
-        [] ->
-          if IndexSet.size endSet >= n
-            then endSet
-            else idxs
+    firstFree = Maybe.unwrap 0 (\i -> i + 1) last
+    firstBlockFree = Maybe.unwrap 0 (\i -> (i + 16) // 16 * 16) last
+    bigEnough start =
+      let
+        free = IndexSet.filter (\(Index i) -> i >= start) empties
+      in
+        if IndexSet.size free >= n then Just free else Nothing
   in
-    go blockStarts
+    bigEnough firstBlockFree
+    |> Maybe.orElse (bigEnough firstFree)
+    |> Maybe.withDefault empties
+
 
 performImport : Model -> Project
 performImport model =
   let
-    buildShuffle : IndexSet a -> IndexSet a -> Shuffle a
-    buildShuffle from to =
+    buildShuffle : IndexSet a -> Maybe Int -> IndexSet a -> Shuffle a
+    buildShuffle from last to =
       Shuffle.asImport
         <| List.map2 Tuple.pair
           (IndexSet.toList from)
-          (IndexSet.toList <| findBlock (IndexSet.size from) to)
+          (IndexSet.toList <| findDestination (IndexSet.size from) last to)
 
     needed = model.needed
     baseFree = model.baseFree
+    baseProject = model.baseProject
 
     moving =
       Shuffles
-        (buildShuffle needed.patterns baseFree.patterns)
-        (buildShuffle needed.samples baseFree.samples)
-        (buildShuffle needed.sounds baseFree.sounds)
+        (buildShuffle needed.patterns (lastOccupied baseProject.patterns) baseFree.patterns)
+        (buildShuffle needed.samples (lastOccupied baseProject.samplePool) baseFree.samples)
+        (buildShuffle needed.sounds (lastOccupied baseProject.soundPool) baseFree.sounds)
   in
       DT.importProject moving model.existingShuffles
         model.importProject model.baseProject
