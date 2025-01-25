@@ -12,6 +12,7 @@ module Elektron.Digitakt.Types exposing
   , isZeroSampleIndex
   , sampleHashSize
   , updateSampleName
+  , zeroSample
 
   , PLock
   , PLocks
@@ -148,6 +149,13 @@ updateSampleName names s =
     else
       s
 
+zeroSample : Sample
+zeroSample =
+  { name = "off"
+  , status = Zero
+  , needsName = False
+  , binary = Dump.emptySample
+  }
 
 {- These high-level versions of `PLock` ensure that the value is indexing the
 correct `Bank` by using `Index a`.

@@ -75,9 +75,15 @@ emptyProject device spec =
   let
     projectSettingsVersion = Version device spec.storageVersions.projectSettings
     patternAndKitVersion = Version device spec.storageVersions.patternAndKit
+
+    setZeros = Bank.indexedMapUpdate (\i ms ->
+      if T.isZeroSampleIndex (Index i)
+        then Just T.zeroSample
+        else ms
+      )
   in
   { patterns = Bank.initializeEmpty 128
-  , samplePool = Bank.initializeEmpty spec.numSampleSlots
+  , samplePool = setZeros <| Bank.initializeEmpty spec.numSampleSlots
   , soundPool = Bank.initializeEmpty 128
   , crossReference = Rel.nullCrossReference
   , binary = Blank.blankProjectSettings projectSettingsVersion
