@@ -153,29 +153,34 @@ h4.dt-name,
 .section .section-header h3 {
     flex: 1 0 30%;
 }
-.section .section-header p {
-    font-size: 0.85rem;
-    margin: 0;
-    padding: 0.25rem 2rem;
-    color: #666;
-}
-.section .section-header .btn-toolbar {
-    margin: 0.25rem 0 0.5rem;
-    padding: 0 0.25rem;
-}
 .section-selector {
     font-family: 'Source Code Pro', monospace;
     font-weight: 600;
     flex: 0 0 auto;
 }
-.section-selector button.selected { text-decoration: overline; }
-.section-selector button.active   { }
-.section-selector button.empty    { color: #ccc;}
-.section-selector button.related  { text-decoration: overline; }
+.section-selector button.selected   { text-decoration: overline; }
+.section-selector button.active     { }
+.section-selector button.empty      { color: #ccc;}
+.section-selector button.related    { text-decoration: overline; }
+.section-selector button.referenced { text-decoration: overline; }
+.section-selector button.needed     { text-decoration: overline; }
 
-.section-commands {
+.section .section-header .section-commands,
+.section .section-header .import-commands,
+.section .section-header .status-bar {
+    margin: 0.25rem 0 0.5rem;
+    padding: 0 0.25rem;
     flex: 1 0 30%;
+    display: flex;
+    flex-wrap: wrap;
     justify-content: flex-end;
+}
+
+.section .section-header p {
+    font-size: 0.85rem;
+    margin: 0 2rem;
+    color: #666;
+    display: inline-block;
 }
 .section-commands .btn:first-child  {
     margin-left: 1rem;

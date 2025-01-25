@@ -259,6 +259,8 @@ receiveSampleFileInfo msg model =
           returnM
             { model
             | project = DT.updateSampleNames justOne model.project
+            , importing =
+                Maybe.map (Import.updateSampleNames justOne) model.importing
             , extraFileNames = extraFileNames
             }
         else
