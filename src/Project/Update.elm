@@ -174,9 +174,8 @@ updateSelection selFn model =
       Nothing -> adjustSelection selection model
       Just dropInfo -> processDrop dropInfo model
 
-validateProject :
-  String -> String -> Drive -> DT.Project -> PendingReceive -> Model -> Update
-validateProject verb origin drive project0 pr model =
+validateProject : Drive -> DT.Project -> PendingReceive -> Model -> Update
+validateProject drive project0 pr model =
   let
     validate =
       DT.validateProject model.instrument project0
@@ -185,6 +184,13 @@ validateProject verb origin drive project0 pr model =
     knownNames = Dict.union (Drive.fileNamesByHash drive) model.extraFileNames
     project = DT.updateSampleNames knownNames project0
 
+    (verb, origin) =
+      case pr of
+        FromDevice LoadProject _ -> ("Fetch",  "from Digitakt")
+        FromDevice StartImport _ -> ("Import", "from Digitakt")
+        FromFile   LoadProject _ -> ("Open",   "file")
+        FromFile   StartImport _ -> ("Import", "file")
+        NothingPending           -> ("Ignore", "project data") -- never happens
 
     action = verb ++ " " ++ origin
 
@@ -295,7 +301,7 @@ receiveDump dump drive model =
     allDone pfn m =
       case m.pendingReceive of
         FromDevice disp p ->
-          validateProject "Fetch" "from Digitakt" drive p m.pendingReceive
+          validateProject drive p m.pendingReceive
             { m
             | pendingReceive = NothingPending
             , progress = pfn m.progress
@@ -481,7 +487,7 @@ update msg drive model =
         finish result =
           case result of
             Ok p ->
-              validateProject "Open" "Project File" drive p model.pendingReceive
+              validateProject drive p model.pendingReceive
             Err message ->
               showAlert
               <| Alert.alert Alert.Danger "Error reading project:" message
@@ -510,7 +516,7 @@ update msg drive model =
             Import.Canceled -> { model | importing = Nothing }
             Import.Imported origin p ->
               updateProject (always p) { model | importing = Nothing }
-              |> undoable ("Import from " ++ origin)
+              |> undoable ("Import " ++ origin)
         Nothing ->
           model
 
