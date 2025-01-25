@@ -51,6 +51,7 @@ type alias Model =
   , existingShuffles : Shuffles
 
   , selection : Sel.Selection
+  , samplePoolOffset : Int
 
   , selected : Items
   , referenced : Items
@@ -76,6 +77,7 @@ init origin base source =
     , existingShuffles = existingShuffles
 
     , selection = Sel.initSelection
+    , samplePoolOffset = 0
 
     , selected = noItems
     , referenced = noItems
@@ -286,6 +288,7 @@ type Msg
   = Cancel
   | Import
   | SelectionMsg Sel.Msg
+  | SetSamplePoolOffset Int
 
 
 type ImportUpdate
@@ -303,6 +306,8 @@ update msg model =
       InProgress
       <| buildImportItems
       <| { model | selection = Sel.update selMsg model.selection }
+    SetSamplePoolOffset i ->
+      InProgress { model | samplePoolOffset = i }
 
 
 
@@ -353,13 +358,57 @@ view model =
           ]
 
 
-    bankView : String -> String -> Kind -> BankOf (DT.BankItem a) -> Html.Html Msg
-    bankView id label k bank =
+    bankSelector : Kind -> Html.Html Msg
+    bankSelector k =
+      let
+        sampleBankButton n =
+          let
+            start = n * 128
+            end = start + 127
+            range = List.range start end
+            itemOccupied i = Bank.get (Index i) model.importProject.samplePool
+              |> Maybe.unwrap False DT.isOccupiedItem
+
+            areAny f = List.any (\i -> isInItems k i (f model)) range
+            empty = not <| List.any itemOccupied range
+          in
+            Html.button
+              [ Attr.class "btn btn-light btn-sm"
+              , Attr.classList
+                  [ ("active", (model.samplePoolOffset == start))
+                  , ("empty", empty)
+                  , ("selected",   areAny .selected)
+                  , ("referenced", areAny .referenced)
+                  , ("needed",     areAny .needed)
+                  ]
+              , Attr.type_ "button"
+              , Attr.disabled False
+              , Events.onClick (SetSamplePoolOffset start)
+              ]
+              [ Html.text <| String.slice n (n + 1) "ABCDEFGHI" ]
+      in
+      case k of
+        KSample ->
+          if Bank.length model.importProject.samplePool > 128
+            then
+              Html.div
+                [ Attr.class "btn-toolbar section-selector"
+                , Aria.role "toolbar"
+                , Attr.title "Bank Selector"
+                , Attr.attribute "data-toggle" "tooltip"
+                , Attr.attribute "data-placement" "right"
+                ]
+                ( List.map sampleBankButton <| List.range 0 7 )
+            else Html.text ""
+        _ -> Html.text ""
+
+    bankView : String -> String -> Kind -> BankOf (DT.BankItem a) -> Int -> Html.Html Msg
+    bankView id label k bank offset =
       let
         column c =
           Html.div
             [ Attr.class "bank-column" ]
-            <| List.map (\r -> item (c * 16 + r)) <| List.range 0 15
+            <| List.map (\r -> item (c * 16 + r + offset)) <| List.range 0 15
         columns = List.map column <| List.range 0 7
         item i = itemView k i (Bank.get (Index i) bank)
 
@@ -369,9 +418,9 @@ view model =
         free = countItems k model.baseFree
         willFit = free >= needed
 
-        counterText n s =
+        counterText n z s =
           Html.text
-          <| if n == 0
+          <| if n == 0 && not z
               then "\u{00A0}"
               else String.padLeft 4 '\u{2007}' (String.fromInt n) ++ " " ++ s
 
@@ -385,19 +434,22 @@ view model =
             [ Html.h3
               [ Attr.classList [("text-danger", not willFit)] ]
               [ Html.text label ]
-            , Html.p []
-              [ counterText selected "selected"
-              , Html.br [] []
-              , counterText (required - selected) "addional needed"
-              ]
-            , Html.p []
-              [ counterText needed "will be imported"
-              , Html.br [] []
-              , if willFit
-                  then counterText (required - needed) "already in project"
-                  else
-                    Html.b [ Attr.class "text-danger" ]
-                      [ counterText (needed - free) " more than will fit" ]
+            , bankSelector k
+            , Html.div [ Attr.class "status-bar"]
+              [ Html.p []
+                [ counterText selected (required > 0) "selected"
+                , Html.br [] []
+                , counterText (required - selected) False "addional needed"
+                ]
+              , Html.p []
+                [ counterText needed (required > 0) "will be imported"
+                , Html.br [] []
+                , if willFit
+                    then counterText (required - needed) False "already in project"
+                    else
+                      Html.b [ Attr.class "text-danger" ]
+                        [ counterText (needed - free) False " more than will fit" ]
+                ]
               ]
             ]
           , Html.div
@@ -420,7 +472,7 @@ Select the items to import to the project, then click Import.  Referenced
 samples and sounds will also be imported, if needed.
 """       ]
           , Html.div
-            [ Attr.class "btn-toolbar"
+            [ Attr.class "btn-toolbar import-commands"
             , Aria.role "toolbar"
             ]
             [ Html.button
@@ -443,9 +495,9 @@ samples and sounds will also be imported, if needed.
     Html.div
       [ ]
       [ importHeader
-      , bankView "patterns" "Patterns"    KPattern model.importProject.patterns
-      , bankView "samples"  "Sample Pool" KSample  model.importProject.samplePool
-      , bankView "sounds"   "Sound Pool"  KSound   model.importProject.soundPool
+      , bankView "patterns" "Patterns"    KPattern model.importProject.patterns 0
+      , bankView "samples"  "Sample Pool" KSample  model.importProject.samplePool model.samplePoolOffset
+      , bankView "sounds"   "Sound Pool"  KSound   model.importProject.soundPool 0
       ]
 
 subscriptions : Model -> Sub Msg
