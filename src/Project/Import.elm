@@ -5,10 +5,12 @@ module Project.Import exposing
   , Msg
   , ImportUpdate(..)
   , update
+  , updateSampleNames
   , view
   , subscriptions
   )
 
+import Dict
 import Html
 import Html.Attributes as Attr
 import Html.Events as Events
@@ -19,6 +21,7 @@ import Bank.IndexSet as IndexSet exposing (IndexSet)
 import Elektron.Digitakt.HighLevel as DT exposing (Project, Shuffles)
 import Elektron.Digitakt.Related as Rel
 import Elektron.Digitakt.Types as DT exposing (Pattern, Sample, Sound)
+import Elektron.Drive as Drive
 import Html.Aria as Aria
 import Missing.Maybe as Maybe
 import Project.Selection.Bank as BSel
@@ -81,6 +84,14 @@ init origin base source =
 
     , importable = False
     }
+
+
+updateSampleNames : Dict.Dict Drive.HashSize String -> Model -> Model
+updateSampleNames names model =
+  { model
+  | baseProject = DT.updateSampleNames names model.baseProject
+  , importProject = DT.updateSampleNames names model.importProject
+  }
 
 
 freeItems : Project -> Items
