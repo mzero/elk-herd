@@ -66,10 +66,10 @@ import Bitwise
 
 import ByteArray exposing (ByteArray)
 import Elektron.Digitakt.CppStructs as CppStructs
-import Elektron.Instrument exposing (Device(..))
+import Elektron.Instrument exposing (Device(..), Version)
 import Elektron.Struct as ST
 import Elektron.Struct.Part as Part exposing (Part)
-import Elektron.Struct.Version as Version exposing (Version, VersionSpec(..))
+import Elektron.Struct.Version as Version exposing (VersionSpec(..))
 import Missing.Maybe as Maybe
 
 

@@ -19,6 +19,7 @@ import Elektron.Digitakt.Shuffle
 import Elektron.Digitakt.Types as DT
 import Elektron.Drive as Drive exposing (Drive)
 import Job exposing (Job, Step(..))
+import Missing.Maybe as Maybe
 import Missing.Time as Time
 import Progress
 import Project.Base exposing (..)
@@ -173,20 +174,31 @@ updateSelection selFn model =
       Nothing -> adjustSelection selection model
       Just dropInfo -> processDrop dropInfo model
 
-validateProject :
-  String -> String -> Drive -> DT.Project -> PendingReceive -> Model -> Update
-validateProject verb origin drive project0 pr model =
+validateProject : Drive -> DT.Project -> PendingReceive -> Model -> Update
+validateProject drive project0 pr model =
   let
+    validate =
+      DT.validateProject model.instrument project0
+    ok = validate |> Result.toMaybe |> Maybe.isJust
+
     knownNames = Dict.union (Drive.fileNamesByHash drive) model.extraFileNames
     project = DT.updateSampleNames knownNames project0
-    (userMessage, ok) = DT.validateProject project
+
+    (verb, origin) =
+      case pr of
+        FromDevice LoadProject _ -> ("Fetch",  "from Digitakt")
+        FromDevice StartImport _ -> ("Import", "from Digitakt")
+        FromFile   LoadProject _ -> ("Open",   "file")
+        FromFile   StartImport _ -> ("Import", "file")
+        NothingPending           -> ("Ignore", "project data") -- never happens
+
     action = verb ++ " " ++ origin
 
     dispFn disp m =
       case disp of
         LoadProject ->
           { m | samplePoolOffset = 0 }
-          |> updateProject (always project) 
+          |> updateProject (always project)
           |> undoable action
         StartImport ->
           { m | importing = Just <| Import.init origin m.project project }
@@ -201,53 +213,32 @@ validateProject verb origin drive project0 pr model =
         FromFile StartImport _  -> dispFn StartImport
 
     getSampleNames m =
-      if ok
-        then returnMR m
-          (DT.neededSampleNames project
-          |> List.map (\(hash, size) ->
-            RequestMessage
-            (Message.SampleFileInfoRequest hash size)
-              -- yes, backwards from normal!
-            ReceiveSampleFileInfo
-          ))
-        else returnM m
+      returnMR m
+        (DT.neededSampleNames project
+        |> List.map (\(hash, size) ->
+          RequestMessage
+          (Message.SampleFileInfoRequest hash size)
+            -- yes, backwards from normal!
+          ReceiveSampleFileInfo
+        ))
 
-    model_ =
-      if ok
-        then modelFn model
-        else model
-
-    alert str =
-      if ok
-        then
-          Alert.alert Alert.Warning
-            (action ++ " warning:")
-            str
-        else
-          Alert.alert Alert.Danger
-            (action ++ " could not load the project:")
-            str
-
-    versionWarning = Nothing -- FIXME
---       case DT.projectVersions project of
---         Nothing -> Nothing
---         Just vers ->
---           if vers.projectSettingsVersion > model.versions.projectSettingsVersion
---           || vers.patternAndKitVersion > model.versions.patternAndKitVersion
---             then Just """
--- This project has patterns from a newer version of the Digitakt OS than your
--- machine has. Sending this project to your Digitakt will not work. Consider
--- upgrading your Digitakt to the lastest OS release.
---   """
---             else Nothing
-
-    postUpdate =
-      case List.filterMap identity [userMessage, versionWarning] of
-        [] -> identity
-        msgs -> thenUpdate <| showAlert (alert (String.join "\n\n" msgs))
+    alertWarning msg =
+      Alert.alert Alert.Warning (action ++ " warning:") msg
+    alertError msg =
+      Alert.alert Alert.Danger (action ++ " could not load the project:") msg
 
   in
-    returnM model_ |> thenUpdate getSampleNames |> postUpdate
+    case validate of
+      Err msg -> showAlert (alertError msg) model
+      Ok validation ->
+       returnM (modelFn model)
+       |> thenUpdate getSampleNames
+       |> thenUpdate (\m ->
+          case validation.warning of
+            Nothing -> returnM m
+            Just msg -> showAlert (alertWarning msg) m
+       )
+
 
 
 receiveSampleFileInfo : Message.ElkMessage -> Model -> Update
@@ -310,7 +301,7 @@ receiveDump dump drive model =
     allDone pfn m =
       case m.pendingReceive of
         FromDevice disp p ->
-          validateProject "Fetch" "from Digitakt" drive p m.pendingReceive
+          validateProject drive p m.pendingReceive
             { m
             | pendingReceive = NothingPending
             , progress = pfn m.progress
@@ -496,7 +487,7 @@ update msg drive model =
         finish result =
           case result of
             Ok p ->
-              validateProject "Open" "Project File" drive p model.pendingReceive
+              validateProject drive p model.pendingReceive
             Err message ->
               showAlert
               <| Alert.alert Alert.Danger "Error reading project:" message
@@ -525,7 +516,7 @@ update msg drive model =
             Import.Canceled -> { model | importing = Nothing }
             Import.Imported origin p ->
               updateProject (always p) { model | importing = Nothing }
-              |> undoable ("Import from " ++ origin)
+              |> undoable ("Import " ++ origin)
         Nothing ->
           model
 

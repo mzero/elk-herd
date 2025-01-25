@@ -35,8 +35,8 @@ import ByteArray exposing (ByteArray)
 import Elektron.Digitakt.BlankDataDigitakt as BlankD1
 import Elektron.Digitakt.BlankDataDigitakt2 as BlankD2
 import Elektron.Digitakt.Dump as Dump
-import Elektron.Instrument exposing (Device(..))
-import Elektron.Struct.Version exposing (Version, VersionSpec(..))
+import Elektron.Instrument exposing (Device(..), Version)
+import Elektron.Struct.Version exposing (VersionSpec(..))
 import ByteArray.Compression
 import ByteArray.Parser as Parser
 
