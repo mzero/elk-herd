@@ -1,0 +1,46 @@
+module SysEx.Debug exposing
+  ( Model
+  , init
+
+  , Direction(..)
+  , addSysEx, addHexDump
+
+  , Msg
+  , update
+  , commands
+  , view
+  )
+
+{-| This is a "null" debugger used in production builds
+-}
+
+import Html
+import ByteArray exposing (ByteArray)
+import Commands exposing (Commands)
+import SysEx.Message exposing (ElkMessage)
+import SysEx.SysEx exposing (SysEx)
+
+type Direction = Sent | Received
+
+
+type alias Model = ()
+
+init : Model
+init = ()
+
+addSysEx : Direction -> SysEx -> Model -> Model
+addSysEx dir sysEx = identity
+
+addHexDump : ByteArray -> Model -> Model
+addHexDump ba = identity
+
+type Msg = Msg
+
+update : Msg -> Model -> (Model, List SysEx, List ElkMessage)
+update msg model = (model, [], [])
+
+commands : Commands Msg
+commands = [ ]
+
+view : Model -> Html.Html Msg
+view model = Html.div [ ] [ ]

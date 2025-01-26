@@ -26,6 +26,8 @@ function build_dev {
 	echo
 }
 
+(cd src/SysEx && ln -sf Debug.elm.dev Debug.elm)
+
 build_dev src/Main.elm
 cat assets/*.js build/main-dev.js > build/main.js
 

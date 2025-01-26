@@ -7,7 +7,6 @@ module Build exposing
   , beta
   , statsReporting
   , emulateDigitakt
-  , midiDebugger
   )
 
 {-| Stored in localStorage as the last run version.
@@ -45,7 +44,4 @@ statsReporting = False
 
 emulateDigitakt : Bool
 emulateDigitakt = False
-
-midiDebugger : Bool
-midiDebugger = False
 

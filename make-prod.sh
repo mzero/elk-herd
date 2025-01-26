@@ -67,6 +67,7 @@ function compact_js {
   ls -lh "build/$mod"*
 }
 
+(cd src/SysEx && ln -sf Debug.elm.prod Debug.elm)
 
 echo "==="
 echo "=== Building Main.elm"
