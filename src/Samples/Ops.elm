@@ -26,7 +26,6 @@ Build
 import Dict
 import Time
 
-import Build
 import Missing.Maybe as Maybe
 import Missing.Time as Time
 import Report
@@ -69,10 +68,7 @@ bumpReceiveSamples = bump "receive-samples"
 
 
 reportInterval : Time.Time
-reportInterval =
-  if Build.emulateDigitakt
-    then 15 * Time.second
-    else 1 * Time.minute
+reportInterval = 1 * Time.minute
 
 subscriptions : Sub Msg
 subscriptions = Time.every reportInterval (always ReportOps)
