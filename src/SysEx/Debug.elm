@@ -1,7 +1,9 @@
 module SysEx.Debug exposing
   ( Model
   , init
-  , addItem
+
+  , Direction(..)
+  , addSysEx, addHexDump
 
   , Msg
   , update
@@ -24,7 +26,7 @@ import Html.Events as Events
 import Regex
 
 import Build
-import ByteArray
+import ByteArray exposing (ByteArray)
 import ByteArray.Compression as Compression
 import Commands as C
 import Elektron.Instrument as EI
@@ -33,13 +35,19 @@ import Missing.List as List
 import Missing.Regex as Regex
 import SysEx.Dump as Dump exposing (ElkDump)
 import SysEx.Message as Message exposing (ElkMessage)
-import SysEx.SysEx as SysEx exposing (SysEx, Direction(..))
+import SysEx.SysEx as SysEx exposing (SysEx)
 import Util
+
+type Direction = Sent | Received
+type Item
+  = SysExItem Direction SysEx
+  | HexDumpItem ByteArray
+
 
 
 type alias Model =
   { show : Bool
-  , items : List (Direction, SysEx)
+  , items : List Item
   , path : String
   , path2 : String
   , device: EI.Device
@@ -50,11 +58,17 @@ type alias Model =
 init : Model
 init = Model False [] "/" "/" EI.Unknown "" "0"
 
-addItem : SysEx.Direction -> SysEx -> Model -> Model
-addItem d s m =
+addItem : Item -> Model -> Model
+addItem item m =
   if Build.midiDebugger
-    then { m | items = m.items ++ [(d, s)] }
+    then { m | items = m.items ++ [item] }
     else m
+
+addSysEx : Direction -> SysEx -> Model -> Model
+addSysEx dir sysEx = addItem (SysExItem dir sysEx)
+
+addHexDump : ByteArray -> Model -> Model
+addHexDump ba = addItem (HexDumpItem ba)
 
 decodeHex : Model -> Model
 decodeHex model =
@@ -72,7 +86,7 @@ decodeHex model =
         )
       |> ByteArray.fromList
   in
-    addItem Decoded (SysEx.sysExFromBytes ba) { model | hexDump = "" }
+    addHexDump ba model
 
 type Msg
  = HideDebug
@@ -176,28 +190,34 @@ commands =
       []
 
 
-viewItem : (Direction, SysEx) -> Html.Html msg
-viewItem (d, sx) =
+viewItem : Item -> Html.Html msg
+viewItem item =
   let
-    extraView =
-      case sx of
-        SysEx.ElektronDump ed ->
-          case ed.message of
-            Dump.Unknown _ _ ba ->
-              [ Html.div [ Attr.class "hexdump" ]
-                [ Html.text <| ByteArray.elmIntList <| Compression.compress ba ]
-              ]
-            _ -> [ ]
+    mainView = case item of
+      SysExItem _ sx -> SysEx.viewSysEx sx
+      HexDumpItem bs ->
+        [ Html.div [ Attr.class "hexdump" ]
+          [ Html.text <| ByteArray.elmIntList bs ]
+        ]
+    itemClassExtra = case item of
+      SysExItem Sent _     -> " sysex-sent"
+      SysExItem Received _ -> " sysex-received"
+      HexDumpItem _        -> ""
+    extraView = case item of
+      SysExItem Received sx -> case sx of
+        SysEx.ElektronDump ed -> case ed.message of
+          Dump.Unknown _ _ ba ->
+            [ Html.div [ Attr.class "label" ] [ Html.text "compressed" ]
+            , Html.div [ Attr.class "hexdump" ]
+              [ Html.text <| ByteArray.elmIntList <| Compression.compress ba ]
+            ]
+          _ -> [ ]
         _ -> [ ]
+      _ -> [ ]
   in
     Html.div
-      [ Attr.classList
-        [ ("sysex-item", True)
-        , ("sysex-sent", d == Sent)
-        , ("sysex-received", d == Received)
-        ]
-      ]
-      <| List.map (Html.map never) <| (SysEx.viewSysEx sx ++ extraView)
+      [ Attr.class ("debug-item" ++ itemClassExtra) ]
+      ( List.map (Html.map never) <| mainView ++ extraView )
 
 view : Model -> Html.Html Msg
 view model = if not Build.midiDebugger then Html.div [] [] else

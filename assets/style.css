@@ -777,7 +777,7 @@ label.btn {
     height: 50rem;
     overflow: scroll;
 }
-.sysex-item {
+.debug-item {
     padding: 0.25rem 0;
     margin-left: 1.25rem;
 }
@@ -794,19 +794,19 @@ label.btn {
     content: "\2192";  /* right arrow */
     color: #f74;
 }
-.sysex-item .hexdump {
+.debug-item .hexdump {
     font-size: 0.75rem;
 }
-.sysex-item .field {
+.debug-item .field {
     display: inline-block
 }
-.sysex-item .field .label {
+.debug-item .field .label {
     color: #aa3;
     font-size: 0.5rem;
     padding: 0 0.5em;
     vertical-align: top;
 }
-.sysex-item .field-fullwidth {
+.debug-item .field-fullwidth {
     width: 100%;
 }
 .hexdump {

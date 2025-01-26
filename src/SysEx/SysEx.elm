@@ -1,6 +1,5 @@
 module SysEx.SysEx exposing
-  ( Direction(..)
-  , SysEx(..)
+  ( SysEx(..)
 
   , SysExBytes(..)
   , sysExFromBytes
@@ -30,9 +29,6 @@ import Missing.Maybe as Maybe
 import SysEx.Dump exposing (..)
 import SysEx.Internal exposing (..)
 import SysEx.Message exposing (..)
-
-
-type Direction = Sent | Received | Decoded
 
 
 type SysEx
