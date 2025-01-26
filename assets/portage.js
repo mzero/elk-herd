@@ -20,45 +20,6 @@ var hookup_ports = function(app, report_url) {
     }
   }
 
-  subscribe("readFile", function(e) {
-    var fileCancel = function() {
-      send("fileCancel", null);
-    }
-
-    var fileList = e.srcElement.files
-    if (fileList.len < 1) {
-      fileCancel();
-      return;
-    }
-
-    try {
-      var reader = new FileReader();
-      reader.onload = function() {
-        send("fileContents", reader.result);
-      };
-      reader.onerror = fileCancel;
-      reader.readAsText(fileList[0]);
-    }
-    catch (e) {
-      fileCancel();
-    }
-
-  });
-
-  subscribe("writeFile", function(e) {
-    let fileName = e[0];
-    let mimeType = e[1];
-    let contents = e[2];
-
-    let blob = new Blob([contents], {type: mimeType});
-    let url = window.URL.createObjectURL(blob);
-    let elem = window.document.createElement('a');
-    elem.href = url
-    elem.download = fileName;
-    elem.click();
-    window.URL.revokeObjectURL(url);
-  });
-
 
   subscribe("readBinaryFile", function (file) {
     let name = file.name;
@@ -295,17 +256,6 @@ var hookup_ports = function(app, report_url) {
     }
 
     return false;
-  });
-
-  subscribe("readLocalStorage", function(key) {
-    var value = localStorage.getItem(key);
-    send("localStorage", [key, value]);
-  });
-
-  subscribe("writeLocalStorage", function(kv) {
-    var key = kv[0];
-    var value = kv[1];
-    localStorage.setItem(key, value);
   });
 
 
