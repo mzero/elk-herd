@@ -708,6 +708,8 @@ h4.dt-name,
 #cmd-panel #cmd-midi-settings    .cmd-icon { background-position-y: -399px; }
 #cmd-panel #cmd-close-midi       .cmd-icon { background-position-y: -439px; }
 
+#cmd-panel #cmd-sysex-debug      .cmd-icon { background-position-y: -879px; }
+
 #cmd-panel #cmd-reset-dt {
     font-size: 0.7rem;
     padding: 0.5rem;
