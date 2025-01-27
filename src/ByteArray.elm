@@ -215,12 +215,12 @@ hexDump ba =
         ++ hexLine addr
         ++ ["  |", asciiLine addr, "|\n"]
 
-    block addr =
+    block addr lines =
       if addr == 0 || addr < length ba
-        then line addr ++ block (addr + 16)
-        else ""
+        then block (addr + 16) (line addr :: lines)
+        else List.reverse lines |> String.concat
   in
-    block 0
+    block 0 [ ]
 
 
 exampleElmIntList : List Int
@@ -247,12 +247,17 @@ elmIntList ba =
     line i = String.concat
       [ "  {- ", addr i, " -}  ", hexFix i, "  {- ", ascii i, " -}\n" ]
 
-    block i =
+    block i lines =
       if i < length ba
-        then line i ++ block (i + 8)
+        then block (i + 8) (line i :: lines)
         else
           if i > 0
-            then String.concat [ "  {- ", addr (length ba), " -}  ]\n" ]
+            then
+              lines
+              |> (::) (String.concat [ "  {- ", addr (length ba), " -}  ]\n" ])
+              |> List.reverse
+              |> String.concat
+
             else "  [ ]\n"
   in
-    block 0
+    block 0 []
