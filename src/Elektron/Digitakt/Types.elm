@@ -5,6 +5,7 @@ module Elektron.Digitakt.Types exposing
   , isPhantomItem
   , isOccupiedItem
   , onNonEmpty
+
   , Pattern
   , Sample
   , Sound
@@ -21,6 +22,9 @@ module Elektron.Digitakt.Types exposing
 
   , SamplePLocks
   , SoundPLocks
+
+  , activeTrackSounds
+  , activeTrackSoundPLocks
 
   , buildPatternFromDump
   , buildSampleFromDump
@@ -108,8 +112,8 @@ type alias Pattern =
                                       -- & mirrors binary.kit.name
   , status       : Status
 
-  , trackSounds  : Array Sound        -- 8 x, mirrors binary.kit.sound
-  , soundPlocks  : Array SoundPLocks  -- 8 x, mirrors binary.sequence.tracks
+  , trackSounds  : Array Sound        -- mirrors binary.kit.sound
+  , soundPlocks  : Array SoundPLocks  -- mirrors binary.sequence.tracks
   , samplePlocks : Array (Maybe SamplePLocks)
     -- 80 x, mirrors binary.sequence.plocks
     -- Only plocks that reference the sample slot are mirrored here, a most
@@ -118,6 +122,22 @@ type alias Pattern =
 
   , binary       : Dump.PatternKit
   }
+
+
+onlyActive : Pattern -> Array a -> List a
+onlyActive pattern =
+  let
+    activeTrack = Dump.activeTrack pattern.binary
+    active (i, a) = if activeTrack i then Just a else Nothing
+  in
+  Array.toIndexedList >> List.filterMap active
+
+activeTrackSounds : Pattern -> List Sound
+activeTrackSounds pat = onlyActive pat pat.trackSounds
+
+activeTrackSoundPLocks : Pattern -> List SoundPLocks
+activeTrackSoundPLocks pat = onlyActive pat pat.soundPlocks
+
 
 type alias Sample =
   { name : String       -- cached from +Drive
@@ -199,7 +219,8 @@ buildPatternFromDump dPatternKit =
 
     buildSamplePlocksFromDump : Dump.PLock -> Maybe SamplePLocks
     buildSamplePlocksFromDump =
-      Maybe.map (Array.map plockFromMaybe) << Dump.plockSamplePLocks
+      Maybe.map (Array.map plockFromMaybe)
+      << Dump.plockSamplePLocks dPatternKit
 
     hasTrigs =
       List.any Dump.anyTrigsSet
