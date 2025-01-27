@@ -94,6 +94,14 @@ projectEmptySound : Project -> Maybe Dump.Sound
 projectEmptySound proj =
   proj.blankPattern
   |> Maybe.andThen (\pat -> Array.get 0 pat.kit.sounds)
+  |> Maybe.map (\snd ->
+      { snd
+      | tagMask = 0
+      , name = ""
+      , sampleSlot = 0
+      , sample = Dump.emptySample
+      }
+    )
 
 
 rebuildCrossReference : Project -> Project
