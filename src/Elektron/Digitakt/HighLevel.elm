@@ -230,7 +230,7 @@ updateSampleNames names project =
   }
 
 
-toSysExDumps : Maybe Dump.Sound -> Project -> List SysEx
+toSysExDumps : Maybe Dump.Sound -> Project -> List SysEx.Dump.ElkDump
 toSysExDumps defSound project =
   let
     defPattern = project.blankPattern
@@ -255,14 +255,14 @@ toSysExDumps defSound project =
       Maybe.map (.version >> .device) project.binary
       |> Maybe.withDefault EI.Unknown
   in
-    List.map (SysEx.SysEx.ElektronDump << SysEx.Dump.ElkDump device) allDumps
+    List.map (SysEx.Dump.ElkDump device) allDumps
 
 
-toSysExDumpsForFile : Project -> List SysEx
+toSysExDumpsForFile : Project -> List SysEx.Dump.ElkDump
 toSysExDumpsForFile = toSysExDumps Nothing
   -- to match the DT's send sysex function, empty sounds are not output
 
-toSysExDumpsForSend : Project -> List SysEx
+toSysExDumpsForSend : Project -> List SysEx.Dump.ElkDump
 toSysExDumpsForSend proj = toSysExDumps (projectEmptySound proj) proj
   -- to ensure the sound pool is correct, send all sounds, even empty ones
 

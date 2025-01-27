@@ -100,7 +100,14 @@ init instrument projectSpec =
 
 
 type alias Update = (Model, Cmd Msg, SysEx.Client.Requests Msg)
-type alias UpdateJob = Job.Job ((Int, Int), Time.Time, Cmd Msg) (Model -> Update)
+
+type alias UpdateStep =
+  { progress : (Int, Int)
+  , pause: Time.Time
+  , cmd : Cmd Msg
+  , requests : SysEx.Client.Requests Msg
+  }
+type alias UpdateJob = Job.Job UpdateStep (Model -> Update)
 
 
 type Msg

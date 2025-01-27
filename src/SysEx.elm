@@ -48,12 +48,13 @@ import Time
 
 import ByteArray exposing (ByteArray)
 import Commands as C
+import Elektron.Instrument as EI
 import Missing.Maybe as Maybe
 import Missing.Time as Time
 import Portage
 import SysEx.Client exposing (..)
 import SysEx.Debug as Debug
-import SysEx.Dump exposing (ElkDump)
+import SysEx.Dump exposing (ElkDump, DumpMessage(..))
 import SysEx.Message as M exposing (ElkMessage)
 import SysEx.SysEx exposing (..)
 import WebMidi
@@ -84,18 +85,25 @@ probeMessage = ByteArray.fromList
   ]
 
 type alias Model msgM =
-  { nextMsgId : Int
-  , inFlight : Dict.Dict Int (Entry msgM)
-  , dumpRespF : Maybe (ElkDump -> msgM)
-  , loopbackResp : Maybe (Bool -> msgM)
-  , debug : Debug.Model
+  { nextMsgId     : Int
+  , inFlight      : Dict.Dict Int (Entry msgM)
+  , dumpSend      : List msgM
+  , dumpRespF     : Maybe (ElkDump -> msgM)
+  , loopbackResp  : Maybe (Bool -> msgM)
+  , debug         : Debug.Model
   , retryInterval : Time.Time
   }
 
 init : Bool -> Model msgM
 init slow =
-  Model startMsgId Dict.empty Nothing Nothing Debug.init
-    (if slow then slowRetryInterval else normalRetryInterval)
+  { nextMsgId     = startMsgId
+  , inFlight      = Dict.empty
+  , dumpSend      = [ ]
+  , dumpRespF     = Nothing
+  , loopbackResp  = Nothing
+  , debug         = Debug.init
+  , retryInterval = (if slow then slowRetryInterval else normalRetryInterval)
+  }
 
 startMsgId : Int
 startMsgId = 20000  -- try to stay out of Transfer's way
@@ -113,6 +121,11 @@ debugSysEx forceShow direction sysEx debug =
           case msg of
             -- M.SampleFileInfoRequest _ _ -> True
             -- M.SampleFileInfoResponse _ _ _ _ -> True
+            _ -> False
+        ElektronDump { message } ->
+          case message of
+            -- DTSoundRequest _ -> True
+            -- DTSoundResponse _ _ -> True
             _ -> False
         _ -> False
 
@@ -135,11 +148,17 @@ debugSysEx forceShow direction sysEx debug =
 {-| See the comment in `SysEx.SysEx.SysExBytes` for why there are two ways to
 send MIDI.
 -}
-sendSysEx : SysEx -> Cmd Msg
-sendSysEx sysEx =
+sendSysExCmd : SysEx -> Cmd Msg
+sendSysExCmd sysEx =
   case sysExToBytes sysEx of
     RawMidiBytes bs -> Portage.sendMidi bs
     ElektronApiBytes bs -> Portage.sendMidiElectronApi bs
+
+sendSysEx : SysEx -> Model msgM -> (Model msgM, Cmd Msg)
+sendSysEx sysEx model =
+    ( { model | debug = debugSysEx False Debug.Sent sysEx model.debug }
+    , sendSysExCmd sysEx
+    )
 
 sendMessage : Bool -> ElkMessage -> Model msgM -> (Model msgM, Int, Cmd Msg)
 sendMessage log message model =
@@ -148,7 +167,7 @@ sendMessage log message model =
     sysEx = ElektronAPI { msgId = msgId, respId = Nothing, msg = message }
     debug_ = debugSysEx log Debug.Sent sysEx model.debug
 
-    sendCmd = sendSysEx sysEx
+    sendCmd = sendSysExCmd sysEx
     timeCmd = Task.perform (\_ -> TimeOut msgId)
       <| Process.sleep model.retryInterval
 
@@ -171,15 +190,34 @@ sendMessageRequest entry model =
     , cmd
     )
 
+
+sendDump : ElkDump -> msgM -> Model msgM -> (Model msgM, Cmd Msg)
+sendDump dump resp model =
+  let
+    (sendCmd, size) =
+      case sysExToBytes (ElektronDump dump) of
+        RawMidiBytes bs     -> ( Portage.sendMidi bs,             ByteArray.length bs)
+        ElektronApiBytes bs -> ( Portage.sendMidiElectronApi bs,  ByteArray.length bs)
+    bytesPerMs =
+      case dump.device of
+        EI.Digitakt -> 175
+        EI.Digitakt2 -> 1000
+        _ -> 175
+    timeCmd =
+      Task.perform (\_ -> SendDumpDelayDone)
+        <| Process.sleep ((toFloat size / bytesPerMs + 20) * Time.millisecond)
+  in
+    ( { model | dumpSend = model.dumpSend ++ [ resp ] }
+    , Cmd.batch [ sendCmd, timeCmd ]
+    )
+
+
 sendDumpRequest : ElkDump -> (ElkDump -> msgM) -> Model msgM -> (Model msgM, Cmd Msg)
 sendDumpRequest dump respF model =
   let
-    sysEx = ElektronDump dump
-    debug_ = debugSysEx False Debug.Sent sysEx model.debug
-    model_ = { model | dumpRespF = Just respF, debug = debug_ }
-    cmd = sendSysEx sysEx
+    model_ = { model | dumpRespF = Just respF }
   in
-    (model_, cmd)
+    sendSysEx (ElektronDump dump) model_
 
 sendLoopbackProbe : (Bool -> msgM) -> Model msgM -> (Model msgM, Cmd Msg)
 sendLoopbackProbe msg model =
@@ -259,6 +297,7 @@ timeOut msgId model =
 type Msg
   = RecvMidi (List Int)
   | RecvMsg (Int, ElkMessage)
+  | SendDumpDelayDone
   | OnDebug Debug.Msg
   | TimeOut Int
   | ProbeTimeout
@@ -280,13 +319,18 @@ update msg model = case msg of
   TimeOut respId ->
     timeOut respId model
 
+  SendDumpDelayDone ->
+    case model.dumpSend of
+      [ ] ->  ( model, [], Cmd.none)
+      (resp :: rest) -> ( { model | dumpSend = rest }, [ resp ], Cmd.none)
+
   ProbeTimeout ->
     loopbackProbeResult False model
 
   OnDebug dMsg ->
     let
       (debug_, sysExs, msgs) = Debug.update dMsg model.debug
-      cmds0 = List.map sendSysEx sysExs
+      cmds0 = List.map sendSysExCmd sysExs
       debug0 = List.foldl (Debug.addSysEx Debug.Sent) debug_ sysExs
 
       sendOne msg_ (m, cs) =
@@ -325,8 +369,12 @@ makeRequests msgF reqs m0 =
   let
     makeOne req m =
       case req of
+        SendSysEx sysEx ->
+          sendSysEx sysEx m
         RequestMessage msg respF ->
           sendMessageRequest { msg = msg, try = 0, rsp = respF >> msgF } m
+        SendDump dump resp ->
+          sendDump dump (msgF resp) m
         StartDump dump respF ->
           sendDumpRequest dump (respF >> msgF) m
         FinishDump ->

@@ -332,7 +332,12 @@ receiveDump dump drive model =
 sendSysExJob : DT.Project -> UpdateJob
 sendSysExJob project =
   Job.singleton DT.toSysExDumpsForSend project
-  |> Job.mapProgress (\_ -> ((0, 0), 1 * Time.millisecond, Cmd.none))
+  |> Job.mapProgress (\_ ->
+      { progress = (0, 0)
+      , pause = 1 * Time.millisecond
+      , cmd = Cmd.none
+      , requests = []
+      })
   |> Job.andThen (\dumpsToWrite ->
     let
       n = List.length dumpsToWrite
@@ -341,14 +346,13 @@ sendSysExJob project =
         case dumps of
           [] -> Complete returnM  -- does nothing on completion!
           d :: ds ->
-            let
-              bytes = SysEx.SysEx.asByteArray d
-              ms = toFloat (ByteArray.length bytes) / 175.0 + 20.0
-            in
-              NextStep
-                ((i, n), ms * Time.millisecond,
-                  Portage.sendMidi bytes)
-                (\_ -> step (i + 1) ds)
+            NextStep
+              { progress = (i, n)
+              , pause = 0
+              , cmd = Cmd.none
+              , requests = [ SendDump d (StepJob (\_ -> step (i + 1) ds)) ]
+              }
+              (\_ -> step (i + 1) ds)
     in
       \_ -> step 0 dumpsToWrite
     )
@@ -357,7 +361,12 @@ sendSysExJob project =
 type alias ProcessJob = Job (Int, Int) (Model -> Update)
 
 processJob : ProcessJob -> UpdateJob
-processJob = Job.mapProgress (\ii -> (ii, 1 * Time.millisecond, Cmd.none))
+processJob = Job.mapProgress (\ii ->
+  { progress = ii
+  , pause = 1 * Time.millisecond
+  , cmd = Cmd.none
+  , requests = []
+  })
 
 
 writeSysExJob : String -> DT.Project -> Job (Int, Int) (Cmd Msg)
@@ -367,8 +376,9 @@ writeSysExJob fileName project =
   |> Job.andThen (\dumpsToWrite ->
     let
       n = List.length dumpsToWrite
+      asBytes = SysEx.SysEx.asByteArray << SysEx.SysEx.ElektronDump
     in
-      Job.indexedList (\i d -> SysEx.SysEx.asByteArray d) dumpsToWrite
+      Job.indexedList (\i d -> asBytes d) dumpsToWrite
       |> Job.mapProgress (\(i, a) -> (i, n))
       |> Job.map (Portage.writeBinaryFile fileName "application/octet-stream")
     )
@@ -397,15 +407,17 @@ readSysExJob emptyProject allBytes =
 updateJob : Model -> UpdateJob -> Update
 updateJob model job =
   case job () of
-    NextStep (counts, pause, cmd) jobNext ->
-      returnMC
-        { model | progress = Progress.update counts model.progress }
-        <| Cmd.batch
-          [ cmd
-          , Task.perform (\_ -> StepJob jobNext)
-              (Process.sleep pause
-                |> Task.andThen Task.succeed)
+    NextStep step jobNext ->
+      returnMCR
+        { model | progress = Progress.update step.progress model.progress }
+        (Cmd.batch
+          [ step.cmd
+          , if  step.pause > 0
+              then Task.perform (\_ -> StepJob jobNext) (Process.sleep step.pause)
+              else Cmd.none
           ]
+        )
+        step.requests
     Complete updateF ->
       updateF { model | progress = Progress.finish model.progress }
 
