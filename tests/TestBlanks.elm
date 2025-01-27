@@ -3,7 +3,7 @@ module TestBlanks exposing (tests)
 import Expect
 import Test as T
 
-import ByteArray exposing (ByteArray)
+import ByteArray
 import ByteArray.Builder as Builder
 import Elektron.Digitakt.Blank as Blank
 import Elektron.Digitakt.CppStructs as CppStructs

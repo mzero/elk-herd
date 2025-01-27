@@ -45,7 +45,7 @@ import Bank.IndexSet as IndexSet
 import Elektron.Digitakt.HighLevel as DT
 import Elektron.Digitakt.Related as DT
 import Elektron.Digitakt.Types as DT
-import Missing.Html.Events exposing (MouseEvent, Position)
+import Missing.Html.Events exposing (Position)
 import Missing.Maybe as Maybe
 import Project.Selection.Bank as BSel
 import Project.Util exposing (..)

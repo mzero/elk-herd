@@ -3,7 +3,7 @@ module TestBuilder exposing (tests)
 import Expect
 import Test as T
 
-import ByteArray exposing (ByteArray)
+import ByteArray
 import ByteArray.Builder as Builder
 import Array
 

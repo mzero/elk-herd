@@ -18,7 +18,7 @@ If the last group has fewer than 7 bytes, they are just omitted. For example:
     0ab00000 0aaaaaaa 0bbbbbbb
 -}
 
-import Array exposing (Array)
+import Array
 import Bitwise
 import ByteArray exposing (ByteArray)
 

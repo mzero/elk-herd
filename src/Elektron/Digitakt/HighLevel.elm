@@ -34,7 +34,7 @@ Interestingly... it all comes down to shuffles (moving around the items in the
 banks of patterns, samples, and sounds), and renaming.
 -}
 
-import Array exposing (Array)
+import Array
 
 import Bank exposing (BankOf, Index(..))
 import Bank.Shuffle as Shuffle exposing (Shuffle)

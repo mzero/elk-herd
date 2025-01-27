@@ -20,7 +20,6 @@ Elektron storage formats. In particular the versioning system requires non-
 trivial amounts of code.
 -}
 
-import Array exposing (Array)
 import Html
 import Html.Attributes as Attr
 

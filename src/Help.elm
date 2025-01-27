@@ -8,7 +8,7 @@ and articles in the main area.
 
 import Browser
 
-import Html exposing (div, text)
+import Html exposing (div)
 import Html.Attributes as Attr exposing (class)
 import Html.Keyed
 

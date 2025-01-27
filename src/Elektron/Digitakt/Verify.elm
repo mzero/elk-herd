@@ -6,9 +6,9 @@ module Elektron.Digitakt.Verify exposing
 consistent and valid.
 -}
 
-import Array exposing (Array)
+import Array
 
-import Bank exposing (Bank, Index)
+import Bank exposing (Index)
 import Bank.IndexSet as IndexSet
 import Elektron.Digitakt.HighLevel exposing (..)
 import Elektron.Digitakt.Types exposing (..)

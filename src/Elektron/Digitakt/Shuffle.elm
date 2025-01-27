@@ -6,7 +6,7 @@ module Elektron.Digitakt.Shuffle exposing
   , sort
   )
 
-import Array exposing (Array)
+import Array
 
 import Bank exposing (Bank, Index(..))
 import Bank.Shuffle as Shuffle exposing (Shuffle)

@@ -21,7 +21,6 @@ For example, each project in a Digitakt has a bank of 128 patterns.
 -}
 
 import Array exposing (Array)
-import Dict exposing (Dict)
 import List
 
 import Missing.List as List

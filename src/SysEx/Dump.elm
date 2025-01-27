@@ -21,7 +21,6 @@ In there are the `structXxxx` objects, which define encoders and decoders
 of these structures.
 -}
 
-import Array exposing (Array)
 import Bitwise
 import Html
 

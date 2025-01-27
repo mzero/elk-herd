@@ -13,7 +13,7 @@ module Bank.Shuffle exposing
   , importFrom
   )
 
-import Array exposing (Array)
+import Array
 import Dict exposing (Dict)
 
 import Bank exposing (Bank, Index(..))

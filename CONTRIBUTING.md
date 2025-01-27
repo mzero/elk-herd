@@ -213,8 +213,10 @@ there aren't a lot of examples in the comments that exist. This is because
 the application as a whole contains many examples of use of these functions.
 Just use your IDE to find the references.
 
-Try to import imported modules the same way: using the same alias, and exposing
-the same things (usually just the main type):
+Try to import imported modules the same way: using the same alias. Exposing the
+main type is fine, exposing something used very frequently is fine, and
+occasionally exposing all (`(..)`) can make sense when importing an sub-module
+meant to keep another module uncluttered.
 
     import ByteArray exposing (ByteArray)
     import Elektron.Digitakt.HighLevel as DT
