@@ -3,7 +3,7 @@ module SysEx.Internal exposing
   , hexFieldView
   , hexdumpFieldView
 
-  , arrayTable, arrayIntTable, arrayHexTable
+  , arrayTable, arrayIntTable, arrayHex16Table
   )
 
 {-| Small utilities for building views of message fields.
@@ -67,5 +67,5 @@ arrayTable cellFn span items =
 arrayIntTable : Int -> Array Int -> Html.Html msg
 arrayIntTable = arrayTable (Html.text << String.fromInt)
 
-arrayHexTable : Int -> Array Int -> Html.Html msg
-arrayHexTable = arrayTable (Html.text << Util.hexUint8)
+arrayHex16Table : Int -> Array Int -> Html.Html msg
+arrayHex16Table = arrayTable (Html.text << Util.hexUint16)
