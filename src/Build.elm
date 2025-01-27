@@ -6,7 +6,6 @@ module Build exposing
 
   , beta
   , statsReporting
-  , emulateDigitakt
   )
 
 {-| Stored in localStorage as the last run version.
@@ -33,7 +32,6 @@ appVersionDisplay : String
 appVersionDisplay =
   "3.3"
   ++ (if beta then "b" else "")
-  ++ (if emulateDigitakt then " e" else "")
 
 
 beta : Bool
@@ -41,7 +39,4 @@ beta = True
 
 statsReporting : Bool
 statsReporting = False
-
-emulateDigitakt : Bool
-emulateDigitakt = False
 

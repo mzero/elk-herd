@@ -46,7 +46,6 @@ import Process
 import Task
 import Time
 
-import Build
 import ByteArray exposing (ByteArray)
 import Commands as C
 import Missing.Maybe as Maybe
@@ -56,7 +55,6 @@ import SysEx.Client exposing (..)
 import SysEx.Debug as Debug
 import SysEx.Dump exposing (ElkDump)
 import SysEx.Message as M exposing (ElkMessage)
-import SysEx.Emulation as Emulation
 import SysEx.SysEx exposing (..)
 import WebMidi
 
@@ -91,13 +89,12 @@ type alias Model msgM =
   , dumpRespF : Maybe (ElkDump -> msgM)
   , loopbackResp : Maybe (Bool -> msgM)
   , debug : Debug.Model
-  , emulation : Emulation.Model
   , retryInterval : Time.Time
   }
 
 init : Bool -> Model msgM
 init slow =
-  Model startMsgId Dict.empty Nothing Nothing Debug.init Emulation.init
+  Model startMsgId Dict.empty Nothing Nothing Debug.init
     (if slow then slowRetryInterval else normalRetryInterval)
 
 startMsgId : Int
@@ -151,32 +148,13 @@ sendMessage log message model =
     sysEx = ElektronAPI { msgId = msgId, respId = Nothing, msg = message }
     debug_ = debugSysEx log Debug.Sent sysEx model.debug
 
-    (emulation1, sendCmd) = if Build.emulateDigitakt
-      then
-        let
-          (emulation2, mRespMsg) = Emulation.respond message model.emulation
-        in
-          ( emulation2
-          , case mRespMsg of
-              Just respMsg ->
-                Task.perform RecvMsg (
-                  Process.sleep (1 * Time.millisecond)
-                  |> Task.andThen (\_ -> Task.succeed (msgId, respMsg))
-                )
-              Nothing -> Cmd.none
-          )
-      else
-       ( model.emulation
-       , sendSysEx sysEx
-       )
-
+    sendCmd = sendSysEx sysEx
     timeCmd = Task.perform (\_ -> TimeOut msgId)
       <| Process.sleep model.retryInterval
 
   in
     ( { model | nextMsgId = bumpMsgId msgId
               , debug = debug_
-              , emulation = emulation1
       }
     , msgId
     , Cmd.batch [ sendCmd, timeCmd ]

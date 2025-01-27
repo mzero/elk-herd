@@ -1,7 +1,5 @@
 port module Portage exposing
-  ( readFile, fileContents, fileCancel
-
-  , readBinaryFile
+  ( readBinaryFile
   , binaryFileContents
   , binaryFileError
 
@@ -12,8 +10,6 @@ port module Portage exposing
   , sampleData, sampleDataError
 
   , writeAudioFile
-
-  , readLocalStorage, localStorage, writeLocalStorage
 
   , MidiPort
   , midiAccess
@@ -48,22 +44,6 @@ byteArrayFromPort = ByteArray.fromArray
 
 -- File operations
 
--- save a file, given the value and suggested download name
-port writeFile : (String, String, String) -> Cmd msg
-    -- the tuple is: file name, mime type, contents
-
-
--- read a file
-    -- This proceeds in two steps:
-    -- 1) After getting some event from a user UI action, pass it to readJsonFile
-    -- 2) When (if) that works, the string value will be passed back via fileContents
-    -- 3) If the user cancels, fileCancel will be triggered
-
-port readFile : E.Value -> Cmd msg
-port fileContents : (String -> msg) -> Sub msg
-port fileCancel : (() -> msg) -> Sub msg
-
-
 port readBinaryFile : E.Value -> Cmd msg
 binaryFileContents : (ByteArray -> msg) -> Sub msg
 binaryFileContents f = binaryFileContents_ (byteArrayFromPort >> f)
@@ -93,13 +73,6 @@ writeAudioFile name bss =
   writeAudioFile_ (name, E.list byteArrayToPort bss)
 
 port writeAudioFile_ : (String, E.Value) -> Cmd msg
-
--- Local Storage
-
-port readLocalStorage : String -> Cmd msg
-port localStorage : ((String, Maybe String) -> msg) -> Sub msg
-
-port writeLocalStorage : (String, String) -> Cmd msg
 
 
 
