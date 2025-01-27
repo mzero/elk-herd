@@ -196,7 +196,7 @@ arrayHex n pa =
     , view = \label v ->
       [ Html.div [ Attr.class "field field-fullwidth" ]
         [ Html.span [ Attr.class "label" ] [ Html.text label ]
-        , arrayHexTable 16 v
+        , arrayHex16Table 16 v
         ]
       ]
     }
