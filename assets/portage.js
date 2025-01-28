@@ -430,6 +430,7 @@ var hookup_ports = function(app, report_url) {
   var appVersionKey = "__app-version__"
   var appOptInKey = "__app-optin__"
   var appInstanceKey = "__app-instance__"
+  var appFlagsKey = "__app-flags__"
 
   var newUUIDv4 = function() {
     let bs = crypto.getRandomValues(new Uint8Array(32));
@@ -523,12 +524,13 @@ var hookup_ports = function(app, report_url) {
       return (v !== null && typeof v == t) ? v : d;
     };
 
-    let ver = getSetting(appVersionKey, "number", 0);
-    ver = ver < 1 ? Math.floor(ver * 100) : ver;
+    let appInfo =
+      { optIn : getSetting(appOptInKey, "boolean", null)
+      , appVersion : getSetting(appVersionKey, "number", 0)
+      , flags : localStorage.getItem(appFlagsKey) || ""
+      };
 
-    let optIn = getSetting(appOptInKey, "boolean", null);
-
-    send("storedAppVersionAndOptIn", [ver, optIn]);
+    send("storedAppInfo", appInfo);
   });
 
   var onlyInstanceChannel;
@@ -541,17 +543,20 @@ var hookup_ports = function(app, report_url) {
     };
   }
 
-  subscribe("resetAppVersion", function(v) {
-    localStorage.clear();
-    localStorage.setItem(appVersionKey, JSON.stringify(v));
-    localStorage.setItem(appInstanceKey, appInstance);
-  });
   subscribe("setAppVersion", function(v) {
     localStorage.setItem(appVersionKey, JSON.stringify(v));
   });
   subscribe("setOptIn", function(b) {
     localStorage.setItem(appOptInKey, JSON.stringify(b));
     reportUA();
+  });
+  subscribe("setFlags", function(s) {
+    if (s) {
+      localStorage.setItem(appFlagsKey, s);
+    }
+    else {
+      localStorage.removeItem(appFlagsKey);
+    }
   });
   subscribe("report", function(kv) {
     report(kv[0], kv[1]);

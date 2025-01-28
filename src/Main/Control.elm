@@ -15,6 +15,7 @@ import Browser.Navigation
 import Task
 
 import Alert
+import AppFlags
 import Build
 import Elektron.Instrument as EI
 import Portage
@@ -46,8 +47,8 @@ prepForMain model0 =
       if EI.hasDriveSamples inst
         then
           let
-            debugSamples = List.member "samples" model.appSettings.flags
-            samplesModel = Samples.init inst debugSamples
+            logScans = AppFlags.getBool "logScans" False model.flags
+            samplesModel = Samples.init inst logScans
           in
           onSamplesUpdate (Samples.kickOff samplesModel) model
         else (model, Cmd.none)
@@ -153,39 +154,38 @@ update msg model =
       in
         ( { model | screen = DeadScreen "MIDI Error" message }, Cmd.none )
 
-    StoredAppInfo (ver, mOptIn) ->
-      if ver < Build.minCompatibleAppVersion
-        then
-          let
-            model_ = { model | screen = SettingsScreen }
-          in
-            ( model_, Portage.resetAppVersion Build.appVersion )
-        else
-          let
-            optIn = mOptIn |> Maybe.withDefault Build.statsReporting
-            appSettings = model.appSettings
-            appSettings_ = { appSettings | reportingOptIn = optIn }
-            screen_ =
-              if mOptIn == Nothing || ver < Build.lastMajorVersion
-                then SettingsScreen
-                else MidiScreen
-            model_ = { model
-              | appSettings = appSettings_
-              , screen = screen_
-              }
-            cmd = if ver < Build.appVersion
-              then Portage.setAppVersion Build.appVersion
-              else Cmd.none
-          in
-            ( model_, Cmd.batch [ Report.appVersion, cmd ] )
+    StoredAppInfo appInfo ->
+      let
+        optIn = appInfo.optIn |> Maybe.withDefault Build.statsReporting
+        screen_ =
+          if appInfo.optIn == Nothing
+            || appInfo.appVersion < Build.lastMajorVersion
+            then SettingsScreen
+            else MidiScreen
+        flags = AppFlags.init appInfo.flags
+        model_ = { model
+          | reportingOptIn = optIn
+          , flags = flags
+          , screen = screen_
+          , sysExModel = SysEx.updateFlags flags model.sysExModel
+          }
+        cmd =
+          if appInfo.appVersion < Build.appVersion
+            then Portage.setAppVersion Build.appVersion
+            else Cmd.none
+      in
+        ( model_, Cmd.batch [ Report.appVersion, cmd ] )
 
     ReportingOptIn optIn ->
+      ( { model | reportingOptIn = optIn }, Cmd.none )
+
+    SetAppFlags flagsString ->
       let
-        appSettings = model.appSettings
-        appSettings_ = { appSettings | reportingOptIn = optIn }
-        model_ = { model | appSettings = appSettings_ }
+        flags_ = AppFlags.init flagsString
+        sysExModel_ = SysEx.updateFlags flags_ model.sysExModel
+        model_ = { model | flags = flags_, sysExModel = sysExModel_ }
       in
-        ( model_, Cmd.none )
+      ( model_, Portage.setFlags flagsString )
 
     AnotherInstanceStarted ->
       let
@@ -204,7 +204,7 @@ here again.
         fromScreen = model.screen
         model_1 = { model | screen = toScreen }
         cmd_1 = case fromScreen of
-          SettingsScreen -> Portage.setOptIn model.appSettings.reportingOptIn
+          SettingsScreen -> Portage.setOptIn model.reportingOptIn
           MidiScreen -> Report.deviceConnect model.connectModel model.webMidiModel
           _ -> Cmd.none
       in
@@ -260,7 +260,7 @@ subscriptions model =
       , Sub.map OnAlert <| Alert.subscriptions model.alertModel
       , Sub.map OnWebMidi <| WebMidi.subscriptions model.webMidiModel
       , Sub.map OnSysEx <| SysEx.subscriptions model.sysExModel
-      , Portage.storedAppVersionAndOptIn StoredAppInfo
+      , Portage.storedAppInfo StoredAppInfo
       , Portage.onlyInstanceMinder (always AnotherInstanceStarted)
       , Portage.midiError MidiError
       ]

@@ -20,12 +20,13 @@ port module Portage exposing
   , closeMidi
 
   , startUpApp
-  , storedAppVersionAndOptIn
   , onlyInstanceMinder
 
-  , resetAppVersion
+  , AppInfo
+  , storedAppInfo
   , setAppVersion
   , setOptIn
+  , setFlags
 
   , report
   , log
@@ -109,13 +110,18 @@ port closeMidi : () -> Cmd msg
 
 -- Application Tooling
 
+type alias AppInfo =
+  { optIn : Maybe Bool
+  , appVersion : Int
+  , flags : String
+  }
 port startUpApp : () -> Cmd msg
-port storedAppVersionAndOptIn : ((Int, Maybe Bool) -> msg) -> Sub msg
+port storedAppInfo : (AppInfo -> msg) -> Sub msg
 port onlyInstanceMinder : (() -> msg) -> Sub msg
 
-port resetAppVersion : Int -> Cmd msg
 port setAppVersion : Int -> Cmd msg
 port setOptIn : Bool -> Cmd msg
+port setFlags : String -> Cmd msg
 
 port report : (String, String) -> Cmd msg
 

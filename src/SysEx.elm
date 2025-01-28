@@ -1,6 +1,7 @@
 module SysEx exposing
   ( Model
   , init
+  , updateFlags
 
   , Msg
   , update
@@ -46,6 +47,7 @@ import Process
 import Task
 import Time
 
+import AppFlags exposing (AppFlags)
 import ByteArray exposing (ByteArray)
 import Commands as C
 import Elektron.Instrument as EI
@@ -72,8 +74,6 @@ retries = 2
 normalRetryInterval : Time.Time
 normalRetryInterval = 5 * Time.second
 
-slowRetryInterval : Time.Time
-slowRetryInterval = 30 * Time.second
 
 probeMessage : ByteArray
 probeMessage = ByteArray.fromList
@@ -91,18 +91,27 @@ type alias Model msgM =
   , dumpRespF     : Maybe (ElkDump -> msgM)
   , loopbackResp  : Maybe (Bool -> msgM)
   , debug         : Debug.Model
+  , dumpRate      : Maybe Float
   , retryInterval : Time.Time
   }
 
-init : Bool -> Model msgM
-init slow =
+init : Model msgM
+init =
   { nextMsgId     = startMsgId
   , inFlight      = Dict.empty
   , dumpSend      = [ ]
   , dumpRespF     = Nothing
   , loopbackResp  = Nothing
   , debug         = Debug.init
-  , retryInterval = (if slow then slowRetryInterval else normalRetryInterval)
+  , dumpRate      = Nothing
+  , retryInterval = normalRetryInterval
+  }
+
+updateFlags : AppFlags -> Model msgM -> Model msgM
+updateFlags flags model =
+  { model
+  | dumpRate      = AppFlags.getFloatOpt "dumpRate" flags
+  , retryInterval = AppFlags.getFloat "retryInterval" normalRetryInterval flags
   }
 
 startMsgId : Int
@@ -198,11 +207,12 @@ sendDump dump resp model =
       case sysExToBytes (ElektronDump dump) of
         RawMidiBytes bs     -> ( Portage.sendMidi bs,             ByteArray.length bs)
         ElektronApiBytes bs -> ( Portage.sendMidiElectronApi bs,  ByteArray.length bs)
-    bytesPerMs =
+    defaultBytesPerMs =
       case dump.device of
         EI.Digitakt -> 175
         EI.Digitakt2 -> 1000
         _ -> 175
+    bytesPerMs = model.dumpRate |> Maybe.withDefault defaultBytesPerMs
     timeCmd =
       Task.perform (\_ -> SendDumpDelayDone)
         <| Process.sleep ((toFloat size / bytesPerMs + 20) * Time.millisecond)

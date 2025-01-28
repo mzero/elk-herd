@@ -1,7 +1,5 @@
 module Main.Base exposing
-  ( AppSettings
-
-  , Page(..)
+  ( Page(..)
   , Screen(..)
   , FileDisposition(..)
 
@@ -17,6 +15,8 @@ module Main.Base exposing
 -}
 
 import Alert
+import AppFlags
+import Portage
 import Project
 import Samples
 import SysEx
@@ -24,17 +24,6 @@ import SysEx.Connect
 import WebMidi
 
 
-
-type alias AppSettings =
-  { reportingOptIn : Bool
-  , flags : List String
-  }
-
-initAppSettings : String -> AppSettings
-initAppSettings flagsString =
-  { reportingOptIn = True
-  , flags = String.split "," flagsString
-  }
 
 {-| Which view of the instrument the user is active.
 Somewhat misnamed: Should be "Panel" or "Tab" or "Section" or ???
@@ -55,7 +44,8 @@ type Screen
 type FileDisposition = FileUnexpected | FileLoad | FileImport
 
 type alias Model =
-  { appSettings : AppSettings
+  { reportingOptIn : Bool
+  , flags : AppFlags.AppFlags
 
   , screen : Screen
   , samplesModel : Maybe Samples.Model
@@ -73,19 +63,20 @@ alert : Alert.Level -> String -> String -> Model -> Model
 alert lvl s1 s2 model = { model | alertModel = Alert.alert lvl s1 s2 }
 
 init : String -> Model
-init flagsString =
-  let
-    appSettings = initAppSettings flagsString
-  in
-    { appSettings = appSettings
-    , screen = SplashScreen
-    , samplesModel = Nothing
-    , projectModel = Nothing
-    , alertModel = Alert.noAlert
-    , webMidiModel = WebMidi.init
-    , sysExModel = SysEx.init (List.member "slow" appSettings.flags)
-    , connectModel = SysEx.Connect.init
-    , fileDisposition = FileUnexpected
+init flags =
+  -- Note: The flags argument comes from the html code that starts the app.
+  -- It is not the flags that user can set on the Settings page. That is stored
+  -- in local storage.
+  { reportingOptIn = True
+  , flags = AppFlags.init ""
+  , screen = SplashScreen
+  , samplesModel = Nothing
+  , projectModel = Nothing
+  , alertModel = Alert.noAlert
+  , webMidiModel = WebMidi.init
+  , sysExModel = SysEx.init
+  , connectModel = SysEx.Connect.init
+  , fileDisposition = FileUnexpected
   }
 
 type Msg
@@ -95,8 +86,9 @@ type Msg
   | OnWebMidi WebMidi.Msg
   | OnSysEx SysEx.Msg
   | OnSysExConnect SysEx.Connect.Msg
-  | StoredAppInfo (Int, Maybe Bool)
+  | StoredAppInfo Portage.AppInfo
   | ReportingOptIn Bool
+  | SetAppFlags String
   | AnotherInstanceStarted
   | GoToScreen Screen
   | CloseMidi

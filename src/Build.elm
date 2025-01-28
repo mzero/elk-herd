@@ -1,7 +1,6 @@
 module Build exposing
   ( appVersion
   , lastMajorVersion
-  , minCompatibleAppVersion
   , appVersionDisplay
 
   , beta
@@ -19,12 +18,6 @@ Midi Setup page.
 -}
 lastMajorVersion : Int
 lastMajorVersion = 33000
-
-{-| On startup, if the version in localStorage is less than this, then
-all localStorage is dropped as it isn't compatible with later settings.
--}
-minCompatibleAppVersion : Int
-minCompatibleAppVersion = 800
 
 {-| Human readable version string.
 -}

@@ -11,6 +11,7 @@ import Alert
 import Build
 import Main.Base exposing (..)
 import SysEx
+import Html.Aria as Aria
 
 
 fromMarkdown : String -> Html.Html msg
@@ -249,7 +250,7 @@ better. Nothin' personal, ya understand, just stats.
 view : Model -> Html.Html Msg
 view model =
   let
-    userOptIn = model.appSettings.reportingOptIn
+    userOptIn = model.reportingOptIn
   in
     Html.div [ Attr.class "container-fluid" ]
       [ Html.div [ Attr.class "row" ]
@@ -271,7 +272,7 @@ view model =
               [ Html.div [ Attr.class "col"]
                 [ if Build.statsReporting
                     then
-                      Html.div [ Attr.class "form-check" ]
+                      Html.div [ Attr.class "form-check mb-3" ]
                       [ Html.label [ Attr.class "form-check-label" ]
                         [ Html.input
                           [ Attr.class "form-check-input"
@@ -284,6 +285,21 @@ view model =
                       ]
                     else
                       Html.text ""
+                , Html.div [ Attr.class "input-group input-group-sm mb-3" ]
+                    [ Html.div [ Attr.class "input-group-prepend" ]
+                      [ Html.span [ Attr.class "input-group-text", Attr.id "flags-label" ]
+                        [ Html.text "Optional flags:" ]
+                      ]
+                    , Html.input
+                      [ Attr.type_ "text"
+                      , Attr.class "form-control"
+                      , Attr.value model.flags.source
+                      , Attr.placeholder "you probably don't need anything here"
+                      , Aria.labeledBy "flags-label"
+                      , Events.onInput SetAppFlags
+                      ]
+                      [ ]
+                    ]
                 ]
               , Html.div [ Attr.class "col" ]
                 [ Html.button
