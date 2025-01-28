@@ -209,9 +209,9 @@ sendDump dump resp model =
         ElektronApiBytes bs -> ( Portage.sendMidiElectronApi bs,  ByteArray.length bs)
     defaultBytesPerMs =
       case dump.device of
-        EI.Digitakt -> 175
-        EI.Digitakt2 -> 1000
-        _ -> 175
+        EI.Digitakt -> 200
+        EI.Digitakt2 -> 800
+        _ -> 200
     bytesPerMs = model.dumpRate |> Maybe.withDefault defaultBytesPerMs
     timeCmd =
       Task.perform (\_ -> SendDumpDelayDone)
