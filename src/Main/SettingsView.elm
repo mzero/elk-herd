@@ -57,7 +57,7 @@ betaIntroduction = fromMarkdown """
 
 * **This is a release candidate.** I believe it works, but there may be bugs.
   Please help by filing a
-  [bug report](https://github.com/mzero/elk-herd-project/issues).
+  [bug report](https://github.com/mzero/elk-herd/issues).
 
 * This was created by me, [mzero](https://www.elektronauts.com/u/mzero/),
   not Elektron.
@@ -74,7 +74,25 @@ versionInfo i s = (i, fromMarkdown s)
 
 changeLog : List (Int, Html.Html msg)
 changeLog =
-  [ versionInfo 33000 """
+  [ versionInfo 33001 """
+## Version 3.3beta2 - Jan 29, 2025
+
+### Support for Digitakt II
+* larger sample pool
+* any track can be audio or midi
+* stereo samples
+
+### Rework of low level structures to support Digitakt II
+* more robust version handling
+* code cleanups
+* faster loading
+
+### Many small UI tweaks, including:
+* collapsing left side
+* alphabetize patterns, samples, & sounds
+"""
+
+  , versionInfo 33000 """
 ## Version 3.3beta - Jan 9, 2025
 
 This is the first open source release. The code base has undergone much
