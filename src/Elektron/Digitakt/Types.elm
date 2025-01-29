@@ -141,6 +141,7 @@ activeTrackSoundPLocks pat = onlyActive pat pat.soundPlocks
 
 type alias Sample =
   { name : String       -- cached from +Drive
+  , path : String       -- cached from +Drive
   , status : Status
   , needsName : Bool
 
@@ -164,7 +165,10 @@ updateSampleName names s =
   if s.needsName
     then
       case Dict.get (sampleHashSize s) names of
-        Just name -> { s | name = name, needsName = False }
+        Just info -> { s | name = info.name
+                         , path = info.path
+                         , needsName = False
+                         }
         _         -> s
     else
       s
@@ -172,6 +176,7 @@ updateSampleName names s =
 zeroSample : Sample
 zeroSample =
   { name = "off"
+  , path = ""
   , status = Zero
   , needsName = False
   , binary = Dump.emptySample
@@ -272,6 +277,7 @@ buildSampleFromDump i dSample =
             else ("???", Live)
   in
     { name = name
+    , path = ""
     , status = status
     , needsName = status == Live
     , binary = dSample

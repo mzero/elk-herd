@@ -8,6 +8,7 @@ module Elektron.Drive exposing
 
   , HashSize
   , hashSize
+  , FileName
   , FileNamesByHash
   , fileNamesByHash
   , collisions
@@ -165,15 +166,18 @@ filesByHash (Drive entry0) =
     add_entry entry0 Dict.empty
 
 
-type alias FileNamesByHash = Dict.Dict HashSize String
+type alias FileName = { name : String, path : String }
+type alias FileNamesByHash = Dict.Dict HashSize FileName
 
 fileNamesByHash : Drive -> FileNamesByHash
 fileNamesByHash drive =
   let
     extractName _ paths =
       case paths of
-        (path :: _) -> Path.baseName path
-        [ ]         -> "???"  -- never happens
+        (path :: _) -> { name = Path.baseName path
+                       , path = Path.pathString path
+                       }
+        [ ]         -> { name = "???" , path = "???" } -- never happens
   in
   filesByHash drive |> Dict.map extractName
 

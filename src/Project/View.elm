@@ -119,11 +119,8 @@ sectionToolBar label k editing sel =
         , Events.onClick (btn.msg k)
         ]
         [ Html.text btn.text ]
-
-    buttonIfNot kSkip btn =
-      if k == kSkip
-        then Nothing
-        else button btn
+    ifNotKind kSkip a = if k == kSkip then Nothing else a
+    ifKind kOnly a = if k == kOnly then a else Nothing
     group grp =
       case List.filterMap identity grp of
         [] -> Nothing
@@ -148,7 +145,7 @@ sectionToolBar label k editing sel =
               , enable = isRel
               , msg = SelectRelated
               }
-          , buttonIfNot KPattern
+          , ifNotKind KPattern <| button
               { title = "Select Unused"
               , text = "\u{2205}"  -- empty set
               , active = False
@@ -156,7 +153,7 @@ sectionToolBar label k editing sel =
               , msg = SelectUnused
               }
           ]
-        , [ buttonIfNot KSample
+        , [ ifNotKind KSample <| button
               { title = "Rename"
               , text = "\u{270E}"  -- pencil
               , active = isSel && editing
@@ -172,11 +169,18 @@ sectionToolBar label k editing sel =
               , msg = CompactItems
               }
           , button
-              { title = "Sort Items"
+              { title = if k == KSample then "Sort by Name" else "Sort Items"
               , text = "\u{1D2C}z"  -- small raised upper case A
               , active = False
               , enable = True
-              , msg = SortItems
+              , msg = SortItems False
+              }
+          , ifKind KSample <| button
+              { title = "Sort by Path"
+              , text = "\u{222E}"   -- path integral
+              , active = False
+              , enable = True
+              , msg = SortItems True
               }
           ]
         , [ button

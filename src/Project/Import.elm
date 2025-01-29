@@ -10,7 +10,6 @@ module Project.Import exposing
   , subscriptions
   )
 
-import Dict
 import Html
 import Html.Attributes as Attr
 import Html.Events as Events
@@ -88,7 +87,7 @@ init origin base source =
     }
 
 
-updateSampleNames : Dict.Dict Drive.HashSize String -> Model -> Model
+updateSampleNames : Drive.FileNamesByHash -> Model -> Model
 updateSampleNames names model =
   { model
   | baseProject = DT.updateSampleNames names model.baseProject

@@ -136,7 +136,7 @@ type Msg
   | SelectUnused Kind
   | RenameItem Kind
   | CompactItems Kind
-  | SortItems Kind
+  | SortItems Bool Kind
   | DeleteItems Kind
 
   | SelectionItemMsg Kind Int Sel.Msg

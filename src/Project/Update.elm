@@ -252,9 +252,10 @@ receiveSampleFileInfo msg model =
               case String.split "/" path |> List.reverse of
                 [] -> "/"
                 (n :: _) -> n
+            info = { name = name, path = path }
             hashSize = Drive.hashSize hash size
-            justOne = Dict.singleton hashSize name
-            extraFileNames = Dict.insert hashSize name model.extraFileNames
+            justOne = Dict.singleton hashSize info
+            extraFileNames = Dict.insert hashSize info model.extraFileNames
           in
           returnM
             { model
@@ -618,13 +619,16 @@ update msg drive model =
       in
         returnMC model_ cmd_
 
-    SortItems k ->
+    SortItems alt k ->
       let
-        sort = Elektron.Digitakt.Shuffle.sort .name (shuffleAllSpec k model)
+        sort f = Elektron.Digitakt.Shuffle.sort f (shuffleAllSpec k model)
 
-        sortPatterns p = DT.shufflePatterns (sort p.patterns) p
-        sortSamples p = DT.shuffleSamples (sort p.samplePool) p
-        sortSounds p = DT.shuffleSounds (sort p.soundPool) p
+        sortPatterns p = DT.shufflePatterns (sort .name p.patterns) p
+        sortSamples p =
+          case alt of
+            False -> DT.shuffleSamples (sort .name p.samplePool) p
+            True -> DT.shuffleSamples (sort .path p.samplePool) p
+        sortSounds p = DT.shuffleSounds (sort .name p.soundPool) p
 
         model_ =
           undoable ("Sort " ++ bankName k)
