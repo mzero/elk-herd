@@ -86,7 +86,6 @@ that existing software didn't do. I hope you find it useful too.
 **Enjoy. Have fun. Make music. Buy me a [beer](https://www.paypal.me/MtnViewMark)!**
 """
 
-
 help : List (Help msg)
 help =
   [ Entry helpStart
@@ -97,7 +96,7 @@ help =
 * Hover over a directory to see the sample list.
 * Click a directory to select it, and the sample list will stay put.
 * Multi-select also works: Use shift key or command/windows key.
-* Click the ```all``` button above the sample list area to show all the smaples,
+* Click the ```all``` button above the sample list area to show all the samples,
   in-line with the directories. This is useful for printing.
 
 **Note:** Some operations take some time and you get a progress box. These
@@ -156,7 +155,7 @@ The **[Empty Trash]** command does what you think, and takes care of deleting
 samples first, then the directories once empty.
 """
 
-    , entry "Transfering Samples" """
+    , entry "Transferring Samples" """
 
 ### To transfer to the device:
 
@@ -208,7 +207,7 @@ if you later transfer the samples back to the +Drive, they'll work as expected.
 
 ### With the Digitakt
 
-Projects can be transfered to and from your instrument. The commands on the
+Projects can be transferred to and from your instrument. The commands on the
 left are:
 
 **[Fetch Project]** reads the currently loaded project on the Digitakt
@@ -246,7 +245,7 @@ the downloads of your browser.
 Digitakt projects consist of three banks of items: Patterns, the Sample Pool,
 and the Sound Pool. These are shown as grids.
 
-Hovering the mouse over any item will hilight the other items that are related.
+Hovering the mouse over any item will highlight the other items that are related.
 For example, hovering over a pattern will show you which sample slots it uses.
 
 ### Selection
@@ -274,9 +273,21 @@ or sound.
 * **[\u{270E}]** Allows you to rename the selected patterns or sounds.
 * **[\u{2AE9}]** Compacts the sample or sound pool so all free space is at the
 end.
+* **[\u{1D2C}z]** Sorts items by their name
+* **[\u{222E}]** Sorts samples by their path in the +Drive, which will group
+them logically.
 * **[\u{00D7}]** Deletes the selected items, but only if they are not used by
 any pattern or sound.
 
+### Digitakt II Sample Pool
+
+The Digitakt II has a very large sample pool, divided into 8 banks,
+labeled A though H. The bank selector in the center of the Sample Pool area
+shows you which bank is being displayed. The selector also shows empty banks
+in grey, and banks with selected or related items with a bar over the letter.
+
+Note: Compact only works on the current bank.  Sorting, on the other hand
+sorts the whole pool.
 """
 
     , entry "Rearranging Items" """
@@ -289,6 +300,11 @@ group of items in front of others.
 
 You can rearrange samples and sounds, and all pattern tracks and plocks will
 be updated with the changes so that everything still plays the same.
+
+### Digitakt II Sample Pool
+
+To move items from one bank to another, drag them up to the bank selector of
+the bank you want, and then straight down into the bank.
 
 ----
 
@@ -328,7 +344,7 @@ You can import selected items (patterns, sample pool entries, sound pool entries
 from one project into another. This allows you to finally assemble projects
 for all the pieces you have scattered all over your Digitakt!
 
-### Importing is a multi-step procress:
+### Importing is a multi-step process:
 
 1) Either start with an empty project, or a project you want to add into.
   * **[Clear Project]** command for an empty project
@@ -347,7 +363,7 @@ header above them.
 
   * You don't need to selected related items, they'll be imported automatically.
   For example, if you select a pattern, all the samples and sounds it needs
-  are hilighted for import as well.
+  are highlighted for import as well.
 
   * The section headers above each bank give you a summary of what will happen.
 
@@ -397,8 +413,7 @@ on import, they will not be merged with other phantoms, even though they are all
 
 ### I found a bug... Where do I report it?
 
-If you use GitHub: [mzero/elk-herd-project
-](https://github.com/mzero/elk-herd-project/issues)
+If you use GitHub: [mzero/elk-herd](https://github.com/mzero/elk-herd/issues)
 
 Or on the [Elektronauts forum
 ](https://www.elektronauts.com/latest). Either message me
@@ -417,10 +432,11 @@ the same original sample file will result in the same hash code, and it
 will "hook up" again to the project! **Note:** this may not work on samples that
 need to be sample rate converted.
 
-### Will this work for the +Drive on my Analog Rytm MKI?
+### Will this work for my other Elektron instruments?
 
-I believe it will, at the next OS upgrade for the mkI!
+Sample management should work for Analog Rytm & Model:Samples.
 
+Project management is only implemented for Digitakt & Digitakt II.
 
 ### Why can't I do anything with the `/factory` content?
 
@@ -430,24 +446,23 @@ stored somewhere else, and really isn't there, or that the +Drive has more
 enough spare space to store 1GB of your samples plus the factory
 content.
 
-### Where is the `/factory` content go?
+### Why isn't the `/factory` content shown?
 
-If you are running Digitakt 1.05 firmware on your machine, it no longer reports
-the `/factory` content to the app. Ah well...
+Elektron machines don't report the `/factory` directory to external software.
+Don't fret, it's all there, we just can't show you the tree.  Older device
+OS versions used to show it... newer ones might again one day...
 
 ### Is this project Open Source?
 
-Not currently:  I had to work out the protocol to the synths on my own, as
-Elektron isn't ready to support it publicly. I respect that, and don't want to
-make the protocol public by releasing my source code. Elektron is committed to
-eventually making an API they can support, and at that point I'll be happy to
-open my source.
+YES! It's on github:
+[mzero/elk-herd](https://github.com/mzero/elk-herd)
+
 """
 
   , entry "Credits" """
 
-I created this, because I wanted to manage my Digitakt. I'm sure Elektron and
-others will create software for managing the Digitakt, too. Let a thousand
+I created this, because I wanted to manage my Digitakt. Elektron and
+others create software for managing the Digitakt, too. Let a thousand
 flowers bloom, I say!
 
 This is hosted on my own web site and free to use.
@@ -455,6 +470,10 @@ This is hosted on my own web site and free to use.
 This app is written in [Elm](http://elm-lang.org/), by me, Mark Lentczner.
 You can find me Elektronauts as [mzero](https://www.elektronauts.com/u/mzero/),
 or if you prefer, [mark@glyphic.com](mailto:mark@glyphic.com).
+
+I'd like to acknowledge the Elektron technical team, who has fielded my
+arcane technical questions over the years, and provided me with technical
+details.
 
 Elk image credit: [Airman 1st Class Kaylee Dubois
 ](https://www.jble.af.mil/News/Photos/igphoto/2001755026/)
