@@ -17,9 +17,7 @@ import Html.Aria as Aria
 import Main.View
 
 
-type alias Model =
-  { article : Article Msg
-  }
+type alias Model = Article Msg
 
 type Msg
   = ShowSection String
@@ -37,7 +35,7 @@ articleFromHash hash =
 
 init : String -> (Model, Cmd Msg)
 init hash =
-    ( Model (articleFromHash hash), Cmd.none )
+    ( articleFromHash hash, Cmd.none )
 
 tocId : Article msg -> String
 tocId art = "toc-" ++  art.id
@@ -113,15 +111,15 @@ helpContent currentArt =
 
 
 view : Model -> Browser.Document Msg
-view model =
-  { title = "crunch/elk-herd - Help: " ++ model.article.title
+view article =
+  { title = "crunch/elk-herd - Help: " ++ article.title
   , body =
     [ Main.View.titlebar
       (Html.h2 [ Attr.class "text-warning" ] [ Html.text "Help" ])
     , div [ Attr.id "main-view", class "container" ]
       [ div [ class "row" ]
-        [ div [ class "col-3" ] [ helpIndex model.article ]
-        , div [ class "col-9" ] [ helpContent model.article ]
+        [ div [ class "col-3" ] [ helpIndex article ]
+        , div [ class "col-9" ] [ helpContent article ]
         ]
       ]
     ]
@@ -130,7 +128,7 @@ view model =
 update : Msg -> Model -> (Model, Cmd none)
 update msg model =
   case msg of
-    ShowSection hash -> ( { model | article = articleFromHash hash }, Cmd.none )
+    ShowSection hash -> ( articleFromHash hash, Cmd.none )
 
 
 port showSection : (String -> msg) -> Sub msg

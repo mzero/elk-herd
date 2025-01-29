@@ -132,8 +132,8 @@ probeMessage msg model =
     sxArg i = Message.TestRequestArgs msg (ByteArray.fromArray <| Array.repeat i 0)
     sxStr = Message.TestRequestString msg model.path
   in
-    sxStr :: [ ]
-          -- List.map sxArg <| List.range 0 8
+    [ sxStr ]
+    -- sxStr :: List.map sxArg <| List.range 0 8
 
 
 querieKeys : List String

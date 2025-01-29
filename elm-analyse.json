@@ -1,17 +1,35 @@
 {
     "checks" : {
-        "DebugLog" : false,
-        "DebugTodo" : false,
-        "DropConsOfItemAndList" : false,
+        "BooleanCase": false,
+
+        "DebugLog" : true,
+        "DebugTodo" : true,
+
+        "DropConcatOfLists": true,
+        "DropConsOfItemAndList": true,
+
+        "NoUncurriedPrefix": true,
 
         "ExposeAll" : false,
+
         "MapNothingToNothing" : false,
         "MultiLineRecordFormatting" : true,
-        "SingleFieldRecord" : false,
+        "SingleFieldRecord" : true,
 
+        "UnnecessaryListConcat": true,
+        "UnnecessaryPortModule": true,
+        "UnusedImport": true,
+        "UnusedImportAlias": true,
+        "UnusedImportedVariable": true,
         "UnusedPatternVariable" : false,
         "UnnecessaryParens" : true,
-        "UseConsOverConcat" : false
+        "UnusedTopLevel": true,
+        "UnusedTypeAlias": true,
+        "UnusedValueConstructor": true,
+        "UnusedVariable": true,
+        "UseConsOverConcat" : false,
+
+        "MissingTypeAnnotation": true
     },
     "TriggerWords" : {
         "words" : [ "TODO", "ToDo", "todo", "FIXME", "FixMe", "fixme" ]
