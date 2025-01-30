@@ -1,7 +1,7 @@
 module Elektron.Digitakt.Dump exposing
   ( PatternKit
   , patternKitName
-  , setPatternKitName
+  , setPatternKitName, setPatternKitIndex
   , activeTrack
 
   , Pattern
@@ -207,6 +207,13 @@ setPatternKitName s patternKit =
   , kit = setKitName s patternKit.kit
   }
 
+setPatternKitIndex : Int -> PatternKit -> PatternKit
+setPatternKitIndex i patternKit =
+  { patternKit
+  | pattern = setPatternIndex i patternKit.pattern
+  }
+
+
 activeTrack : PatternKit -> Int -> Bool
 activeTrack patternKit =
   case patternKit.kit.midiMask of
@@ -271,6 +278,8 @@ patternName pattern = pattern.name
 setPatternName : String -> Pattern -> Pattern
 setPatternName s pattern = { pattern | name = s }
 
+setPatternIndex : Int -> Pattern -> Pattern
+setPatternIndex i pattern = { pattern | kitIndex = i }
 
 
 

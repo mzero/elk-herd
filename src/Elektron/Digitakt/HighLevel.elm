@@ -235,17 +235,22 @@ toSysExDumps defSound project =
   let
     defPattern = project.blankPattern
 
-    toDump dumpConst defItem (Index i, item) =
+    toDump prepAndDump defItem (Index i, item) =
       item
       |> Maybe.map .binary
       |> Maybe.unwrap defItem Just
-      |> Maybe.map (dumpConst i)
+      |> Maybe.map (prepAndDump i)
+
+    prepAndDumpPatternKit i p =
+      SysEx.Dump.DTPatternKitResponse i
+        <| Dump.setPatternKitIndex i p
+    prepAndDumpSound = SysEx.Dump.DTSoundResponse
 
     bankDump dumpConst defItem  =
       Bank.toIndexedList >> List.filterMap (toDump dumpConst defItem)
 
-    patternDumps = bankDump SysEx.Dump.DTPatternKitResponse defPattern project.patterns
-    soundDumps = bankDump SysEx.Dump.DTSoundResponse defSound project.soundPool
+    patternDumps = bankDump prepAndDumpPatternKit defPattern project.patterns
+    soundDumps = bankDump prepAndDumpSound defSound project.soundPool
     projectDump = case project.binary of
       Just pb -> [SysEx.Dump.DTProjectSettingsResponse pb]
       Nothing -> []
