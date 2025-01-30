@@ -32,6 +32,7 @@ Used for things like the 128 Pattern slots in a project.
 
     Bank.elm
     Bank/IndexSet.elm
+    Bank/Suffle.elm
 
 `ByteArray` handles all the binary data. It is more like `Array Byte` (if we
 had a `Byte` type), than like elm's `Bytes`.
@@ -78,23 +79,28 @@ Managing sending and receiving
 Misc. stuff
 
     SysEx/Connect.elm
-    SysEx/Debug.elm
-    SysEx/Emulation.elm
     SysEx/Internal.elm
+
+    SysEx/Debug.elm  -- which is always sym-link'd to one of:
+    SysEx/Debug.elm.dev
+    SysEx/Debug.elm.prod
 
 
 ### Digitakt
 
 Low-level project data structures, storing and decoding the binary storage
-structures the instrument exchanges.  `StructUtil` is some heavy functional
+structures the instrument exchanges.  `Struct` is some heavy functional
 programming magic that is pretty cool, if I do say so myself!
 
-    Elektron/StructUtil.elm
+    Elektron/Struct.elm
+    Elektron/Struct/Part.elm
+    Elektron/Struct/Version.elm
 
     Elektron/Digitakt/Dump.elm
 
     Elektron/Digitakt/Blank.elm
-    Elektron/Digitakt/BlankData.elm
+    Elektron/Digitakt/BlankDataDigitakt.elm
+    Elektron/Digitakt/BlankDataDigitakt2.elm
     Elektron/Digitakt/CppStructs.elm
 
 High-level project data structures, forming a logical view of the project
@@ -104,14 +110,13 @@ for the rest of the application.
 
     Elektron/Digitakt/HighLevel.elm
     Elektron/Digitakt/Related.elm
+    Elektron/Digitakt/Shuffle.elm
     Elektron/Digitakt/Verify.elm
 
 +Drive structure, which works for other Elektron instruments as well.
 
     Elektron/Drive.elm
     Elektron/Path.elm
-
-    Elektron/Digitakt/FactorySamples.elm
 
 Miscellaneous
 
@@ -126,6 +131,7 @@ by Bootstrap. See, for example, `Alert` or `Progress`.
 ### Utilities
 
     Alert.elm
+    ApiFlags.elm
     Commands.elm
     Job.elm
     Progress.elm

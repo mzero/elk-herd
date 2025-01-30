@@ -2,14 +2,15 @@
 
 **elk-herd** is a device manager for some Elektron instruments:
 
-### **+Drive Sample management** for Digitakt and Analog Rytm
-
+### **+Drive Sample management**
+_for Digitakt, Digitakt II, Model:Samples, and Analog Rytm MK I & II_
 * Transfer files to and from your computer with simple drag-n-drop
 * Reorganize the +Drive with drag-n-drop
 * Easily rename files and folders
 * View your whole +Drive structure at once
 
-### **Project & Pattern management** for Digitakt
+### **Project & Pattern management**
+_for Digitakt and Digitakt II_
 
 * Transfer projects to/from your computer
 * Reorganize patterns, the sample pool, and the sound pool with drag-n-drop
