@@ -218,7 +218,7 @@ sampleTrack : PatternKit -> Int -> Bool
 sampleTrack patternKit =
   case patternKit.kit.midiMask of
     Nothing -> (\t -> 0 <= t && t < 8)
-    Just mask -> (\t -> 0 <= t && t < 15
+    Just mask -> (\t -> 0 <= t && t < 16
                         && Bitwise.and mask (Bitwise.shiftLeftBy t 1) == 0)
 
 --
