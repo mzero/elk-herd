@@ -229,7 +229,7 @@ buildCrossReference patterns samplePool soundPool =
     patternRelations : Pattern -> (RelationArray Sample, RelationArray Sound)
     patternRelations pattern =
       let
-        samp1 = List.map .sampleSlot <| activeTrackSounds pattern
+        samp1 = List.map .sampleSlot <| sampleTrackSounds pattern
         samp2 =
           List.filterMap identity
           <| List.concat
@@ -239,7 +239,7 @@ buildCrossReference patterns samplePool soundPool =
           List.filterMap identity
           <| List.concat
           <| List.map Array.toList
-          <| activeTrackSoundPLocks pattern
+          <| sampleTrackSoundPLocks pattern
         samp3 = List.filterMap soundSample sounds
         samples =
           List.filter (isZeroSampleIndex >> not)

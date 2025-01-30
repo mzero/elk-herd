@@ -2,7 +2,7 @@ module Elektron.Digitakt.Dump exposing
   ( PatternKit
   , patternKitName
   , setPatternKitName, setPatternKitIndex
-  , activeTrack
+  , sampleTrack
 
   , Pattern
   , Track
@@ -214,8 +214,8 @@ setPatternKitIndex i patternKit =
   }
 
 
-activeTrack : PatternKit -> Int -> Bool
-activeTrack patternKit =
+sampleTrack : PatternKit -> Int -> Bool
+sampleTrack patternKit =
   case patternKit.kit.midiMask of
     Nothing -> (\t -> 0 <= t && t < 8)
     Just mask -> (\t -> 0 <= t && t < 15
@@ -386,10 +386,10 @@ plockSamplePLocks patternKit plock =
               else Just <| Bitwise.shiftRightBy 8 v
         Digitakt2 -> \v -> if v == 0xffff then Nothing else Just v
         _ -> always Nothing
-    active = activeTrack patternKit
+    isSampleTrack = sampleTrack patternKit
     isSamplePlock =
       CppStructs.soundParameters_sampleParamId plock.version
-      |> Maybe.map (\n -> n == plock.paramId && active plock.track)
+      |> Maybe.map (\n -> n == plock.paramId && isSampleTrack plock.track)
       |> Maybe.withDefault False
   in
     if isSamplePlock

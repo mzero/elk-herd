@@ -24,7 +24,7 @@ allSoundPLocks : Project -> List (Index Sound)
 allSoundPLocks proj =
   let
     allPatternSoundPlocks pat =
-      activeTrackSoundPLocks pat
+      sampleTrackSoundPLocks pat
       |> List.map Array.toList
       |> List.concat
       |> List.filterMap identity

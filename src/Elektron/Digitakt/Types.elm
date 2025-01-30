@@ -23,8 +23,8 @@ module Elektron.Digitakt.Types exposing
   , SamplePLocks
   , SoundPLocks
 
-  , activeTrackSounds
-  , activeTrackSoundPLocks
+  , sampleTrackSounds
+  , sampleTrackSoundPLocks
 
   , buildPatternFromDump
   , buildSampleFromDump
@@ -124,19 +124,19 @@ type alias Pattern =
   }
 
 
-onlyActive : Pattern -> Array a -> List a
-onlyActive pattern =
+onlySampleTracks : Pattern -> Array a -> List a
+onlySampleTracks pattern =
   let
-    activeTrack = Dump.activeTrack pattern.binary
-    active (i, a) = if activeTrack i then Just a else Nothing
+    sampleTrack = Dump.sampleTrack pattern.binary
+    ifSampletrack (i, a) = if sampleTrack i then Just a else Nothing
   in
-  Array.toIndexedList >> List.filterMap active
+  Array.toIndexedList >> List.filterMap ifSampletrack
 
-activeTrackSounds : Pattern -> List Sound
-activeTrackSounds pat = onlyActive pat pat.trackSounds
+sampleTrackSounds : Pattern -> List Sound
+sampleTrackSounds pat = onlySampleTracks pat pat.trackSounds
 
-activeTrackSoundPLocks : Pattern -> List SoundPLocks
-activeTrackSoundPLocks pat = onlyActive pat pat.soundPlocks
+sampleTrackSoundPLocks : Pattern -> List SoundPLocks
+sampleTrackSoundPLocks pat = onlySampleTracks pat pat.soundPlocks
 
 
 type alias Sample =
