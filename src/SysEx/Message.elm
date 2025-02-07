@@ -6,6 +6,7 @@ module SysEx.Message exposing
   , messageBuilder
   , parseMessage
   , viewMessage
+  , messageLogString
   )
 
 import Dict
@@ -79,7 +80,7 @@ type ElkMessage
 
 {- APIs come in pairs of request and response messages. Each `api*` value is
 description of such a pair. It is built from two `Msg*` objects which
-descirbe the arguments to the two messages.
+describe the arguments to the two messages.
 -}
 
 -- 0x0n Messages: Device information --
@@ -371,4 +372,48 @@ viewMessage msg = List.map (Html.map never) <| case msg of
   TimeOut ->
     [ fieldView "error" "time out"
     ]
+
+messageLogString : ElkMessage -> String
+messageLogString msg =
+  case msg of
+    Unknown id data                   -> "Unknon message " ++ String.fromInt id
+
+    DeviceRequest                     -> "DeviceRequest"
+    DeviceResponse dev msgs model     -> "DeviceResponse"
+    VersionRequest                    -> "VersionRequest"
+    VersionResponse build version     -> "VersionResponse"
+    QueryRequest key                  -> "QueryRequest"
+    QueryResponse value               -> "QueryResponse"
+    DirListRequest path               -> "DirListRequest"
+    DirListResponse entries           -> "DirListResponse"
+    DirCreateRequest path             -> "DirCreateRequest"
+    DirCreateResponse ok              -> "DirCreateResponse"
+    DirDeleteRequest path             -> "DirDeleteRequest"
+    DirDeleteResponse ok              -> "DirDeleteResponse"
+    FileDeleteRequest path            -> "FileDeleteRequest"
+    FileDeleteResponse ok             -> "FileDeleteResponse"
+    ItemRenameRequest from to         -> "ItemRenameRequest"
+    ItemRenameResponse ok             -> "ItemRenameResponse"
+    SampleFileInfoRequest h s         -> "SampleFileInfoRequest"
+    SampleFileInfoResponse ok s h n   -> "SampleFileInfoResponse"
+    FileReadOpenRequest path          -> "FileReadOpenRequest"
+    FileReadOpenResponse ok fd len    -> "FileReadOpenResponse"
+    FileReadCloseRequest fd           -> "FileReadCloseRequest"
+    FileReadCloseResponse fd len      -> "FileReadCloseResponse"
+    FileReadRequest fd len offset     -> "FileReadRequest"
+    FileReadResponse ok fd len offset end data
+                                      -> "FileReadResponse"
+    FileWriteOpenRequest len path     -> "FileWriteOpenRequest"
+    FileWriteOpenResponse ok len      -> "FileWriteOpenResponse"
+    FileWriteCloseRequest fd len      -> "FileWriteCloseRequest"
+    FileWriteCloseResponse ok fd len  -> "FileWriteCloseResponse"
+    FileWriteRequest fd len start bs  -> "FileWriteRequest"
+    FileWriteResponse ok len          -> "FileWriteResponse"
+
+    TestRequest id              -> "TestRequest " ++ String.fromInt id
+    TestRequestArgs id args     -> "TestRequestArgs " ++ String.fromInt id
+    TestRequestString id arg    -> "TestRequestString " ++ String.fromInt id
+    TestRequest2String id s1 s2 -> "TestRequest2String " ++ String.fromInt id
+
+    TimeOut -> "TimeOut"
 

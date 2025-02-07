@@ -21,6 +21,7 @@ module Samples.Base exposing
   , InDrop
 
   , QueueAction(..)
+  , queueActionLogString
   , Queue
   , emptyQueue
 
@@ -156,6 +157,25 @@ type QueueAction
   | QARenameItem Path Path
   | QAReadFile Path String
   | QAWriteFile Path String D.Value
+
+
+queueActionLogString : QueueAction -> String
+queueActionLogString qa =
+  case qa of
+    QAListDir rec path    -> "QAListDir "
+                              ++ (if rec then "-r " else "")
+                              ++ Path.pathString path
+    QACreateDir path      -> "QACreateDir " ++ Path.pathString path
+    QADeleteDir path      -> "QADeleteDir " ++ Path.pathString path
+    QADeleteFile path     -> "QADeleteFile "++ Path.pathString path
+    QARenameItem pathSrc pathDst
+                          -> "QARenameItem"
+                              ++ Path.pathString pathSrc
+                              ++ " "
+                              ++ Path.pathString pathDst
+    QAReadFile path _     -> "QAReadFile "++ Path.pathString path
+    QAWriteFile path _ _  -> "QAWriteFile " ++ Path.pathString path
+
 
 type alias Queue =
   { actions: List QueueAction

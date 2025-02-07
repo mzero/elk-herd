@@ -471,7 +471,10 @@ updateRecvUnexpectedMsg msg = withModel <| \model ->
     inFlight = model.queue |> Maybe.andThen .inFlight
   in
     finishQueue False
-    >> alwaysLog "unexpected message" [] -- TODO: stringify [inFlight, msg]
+    >> alwaysLog "unexpected message"
+      [ Maybe.unwrap "<no action>" queueActionLogString inFlight
+      , M.messageLogString msg
+      ]
     >> case msg of
       M.TimeOut ->
         updateModel (\m -> { m | drive = Drive.emptyDrive })
@@ -490,7 +493,10 @@ updateRecvResponseFail msg = withModel <| \model ->
     inFlight = model.queue |> Maybe.andThen .inFlight
   in
     finishQueue False
-    >> alwaysLog "failed message" [] -- TODO: stringify [inFlight, msg]
+    >> alwaysLog "failed message"
+      [ Maybe.unwrap "<no action>" queueActionLogString inFlight
+      , M.messageLogString msg
+      ]
     >> alert Alert.Warning "Operation failed: "
       """
   The instrument wouldn't do what we asked. This can happen if you've edited
