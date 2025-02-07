@@ -480,8 +480,8 @@ updateRecvUnexpectedMsg msg = withModel <| \model ->
         updateModel (\m -> { m | drive = Drive.emptyDrive })
         >> alert Alert.Fatal "Communication Failed" """
 The instrument did not respond after trying a few times.
-If you have directories with many samples (>100) try adding "?slow" to the end
-of the URL in the address bar and reloading this app. This will make the
+If you have directories with many samples (>100) try going to the App Settings
+page and adding "retryInterval=15000" to the Optional flags. This will make the
 application wait longer for your instrument to respond.
 """
       _ ->
