@@ -413,7 +413,9 @@ view model =
           , Attr.class id
           ]
           [ Html.div
-            [ Attr.class "section-header" ]
+            [ Attr.class "section-header"
+            , Attr.classList [("danger", not willFit)]
+            ]
             [ Html.h3
               [ Attr.classList [("text-danger", not willFit)] ]
               [ Html.text label ]
