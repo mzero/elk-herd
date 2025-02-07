@@ -16,7 +16,6 @@ import Elektron.Digitakt.HighLevel as DT
 import Elektron.Digitakt.Related as DT
 import Elektron.Digitakt.Verify as DT
 import Elektron.Digitakt.Shuffle
-import Elektron.Digitakt.Types as DT
 import Elektron.Drive as Drive exposing (Drive)
 import Job exposing (Job, Step(..))
 import Missing.Maybe as Maybe

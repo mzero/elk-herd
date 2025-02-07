@@ -277,8 +277,8 @@ toSysExDumpsForSend proj = toSysExDumps (projectEmptySound proj) proj
 Shuffling occurs when the user reorders items in a bank, or when they import
 items from one bank to another.
 
-While the work reordering the tiems in the bank is taken care of in the `Bank`
-module... the important work is fixing up the refrences to the moved items.
+While the work reordering the items in the bank is taken care of in the `Bank`
+module... the important work is fixing up the references to the moved items.
 
 For example, when a sample is moved to a new slot, any sound in any pattern that
 referenced thad sample has to be updated to refer to the new slot. Same has to
@@ -501,14 +501,7 @@ findSameSounds base proj =
 setPatternName : Index Pattern -> String -> Project -> Project
 setPatternName idx s p =
   let
-    update pat =
-      let
-        binary_ = Dump.setPatternKitName s pat.binary
-      in
-        { pat
-        | name = Dump.patternKitName binary_
-        , binary = binary_
-        }
+    update = T.setPatternName s
   in
     { p | patterns = Bank.update (Maybe.map update) idx p.patterns }
 
@@ -516,14 +509,7 @@ setPatternName idx s p =
 setSoundName : Index Sound -> String -> Project -> Project
 setSoundName idx s p =
   let
-    update snd =
-      let
-        binary_ = Dump.setSoundName s snd.binary
-      in
-        { snd
-        | name = Dump.soundName binary_
-        , binary = binary_
-        }
+    update = T.setSoundName s
   in
     { p | soundPool = Bank.update (Maybe.map update) idx p.soundPool }
 

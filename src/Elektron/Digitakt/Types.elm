@@ -10,10 +10,12 @@ module Elektron.Digitakt.Types exposing
   , Sample
   , Sound
 
+  , setPatternName
   , isZeroSampleIndex
   , sampleHashSize
   , updateSampleName
   , zeroSample
+  , setSoundName
 
   , PLock
   , PLocks
@@ -34,7 +36,7 @@ module Elektron.Digitakt.Types exposing
 {-| High-level project data structures: These structures match the way elk-herd
 presents the project, and is closer to how the instrument's UI operates.
 
-These structures also contain cross-reference indicies that enable moving items
+These structures also contain cross-reference indices that enable moving items
 around and having references to them fixed up to the new slot numbers.
 -}
 
@@ -51,13 +53,13 @@ import Elektron.Drive as Drive
 slots and sample pool always have something in them, just some values are
 considered by the machine "empty".
 
-In addition there are entries that fall into limbo: The instrucment treats
+In addition there are entries that fall into limbo: The instrument treats
 them as empty, but in fact they have user content in them. For example, a
 pattern that has no trigs, and no name, but has user assign kit settings.
 These are marked as `Phantom`.
 
 Zero items are the "0" entries on each page of the Sample Pool. These are
-unassignable & unmoveable.
+un-assignable & un-moveable.
 -}
 type Status = Zero | Empty | Phantom | Live
 type alias BankItem a = { a | status : Status, name : String }
@@ -89,10 +91,10 @@ form.
 
 While it is usually an bad idea to have the same information in two places,
 this is done for several reasons:
-  * We must be able to "rount-trip" the binary structures, and keeping all
+  * We must be able to "round-trip" the binary structures, and keeping all
     the extra data here would over-shadow the information we care about.
   * The data needed by the application is often spread out in the binary
-    structures, and burdoning the upper layers with that seems bad. In
+    structures, and burdening the upper layers with that seems bad. In
     particular, there are many more structures involved in the binary layer,
     than the just three data types here.
 
@@ -123,6 +125,16 @@ type alias Pattern =
   , binary       : Dump.PatternKit
   }
 
+setPatternName : String -> Pattern -> Pattern
+setPatternName s pat =
+  let
+    binary_ = Dump.setPatternKitName s pat.binary
+  in
+    { pat
+    | name = Dump.patternKitName binary_
+    , binary = binary_
+    }
+
 
 onlySampleTracks : Pattern -> Array a -> List a
 onlySampleTracks pattern =
@@ -146,14 +158,6 @@ type alias Sample =
   , needsName : Bool
 
   , binary : Dump.Sample
-  }
-
-type alias Sound =
-  { name : String              -- mirrors binary
-  , status : Status
-  , sampleSlot: Index Sample   -- mirrors binary
-
-  , binary : Dump.Sound
   }
 
 
@@ -182,6 +186,24 @@ zeroSample =
   , binary = Dump.emptySample
   }
 
+type alias Sound =
+  { name : String              -- mirrors binary
+  , status : Status
+  , sampleSlot: Index Sample   -- mirrors binary
+
+  , binary : Dump.Sound
+  }
+
+setSoundName : String -> Sound -> Sound
+setSoundName s snd =
+  let
+    binary_ = Dump.setSoundName s snd.binary
+  in
+    { snd
+    | name = Dump.soundName binary_
+    , binary = binary_
+    }
+
 {- These high-level versions of `PLock` ensure that the value is indexing the
 correct `Bank` by using `Index a`.
 -}
@@ -207,7 +229,7 @@ high level field is extracted.
 
 There are functions going the other way: In `Elektron.Digitakt.HighLevel`,
 functions that modify the high level data, also update the low level so that
-they are always kept in sync. It is argueable that those modification funcionts
+they are always kept in sync. It is arguable that those modification functions
 should be better abstracted and placed here.
 -}
 
@@ -248,13 +270,13 @@ buildPatternFromDump dPatternKit =
         {- Whaaaaat? Lemme explain....
         If the pattern is actually empty, then we want to show nothing for
         the name. Indeed, on newer instrument OS, the pattern has the empty
-        string as the name. But older ones had it set to "UNITITLED" and so
+        string as the name. But older ones had it set to "UNTITLED" and so
         for the UI we use the name ""
 
         On the other hand, if the pattern is actually modified by the user,
         but they haven't given it a name, on new instrument OS, the pattern
         still has the empty string as the name.. but we want to show the user
-        the pattern is in use, so we substitute the name "UNTITLTED".
+        the pattern is in use, so we substitute the name "UNTITLED".
         -}
   in
     { name = name_
