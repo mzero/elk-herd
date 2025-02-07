@@ -177,7 +177,7 @@ update msg model = case msg of
 commands : C.Commands Msg
 commands =
   [ C.Group "SysEx Commands"
-    [ C.Button "cmd-sysex-debug"  "Debug MIDI"  ShowDebug
+    [ C.Button "cmd-sysex-debug" "Debug MIDI" True ShowDebug
     ]
   ]
 

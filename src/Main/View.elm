@@ -35,12 +35,12 @@ import Main.MidiSetupView
 appCommands : C.Commands Msg
 appCommands =
   [ C.Group "Help"
-    [ C.Anchor "cmd-help" "Help" "help.html"
+    [ C.Anchor "cmd-help" "Help" True "help.html"
     ]
   , C.Group "App Commands"
-    [ C.Button "cmd-app-settings"    "App Settings"  (GoToScreen SettingsScreen)
-    , C.Button "cmd-midi-settings"   "MIDI Settings" (GoToScreen MidiScreen)
-    , C.Button "cmd-close-midi"      "Close MIDI"    (CloseMidi)
+    [ C.Button "cmd-app-settings"    "App Settings"  True (GoToScreen SettingsScreen)
+    , C.Button "cmd-midi-settings"   "MIDI Settings" True (GoToScreen MidiScreen)
+    , C.Button "cmd-close-midi"      "Close MIDI"    True (CloseMidi)
     ]
   ]
 

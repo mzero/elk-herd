@@ -4,6 +4,7 @@ module Html.Aria exposing
   , expanded
   , hasPopUp
   , hidden
+  , disabled
   , label
   , labeledBy
   , values
@@ -39,6 +40,9 @@ hasPopUp = boolAttribute "aria-haspopup"
 
 hidden : Bool -> Attribute msg
 hidden = boolAttribute "aria-hidden"
+
+disabled : Bool -> Attribute msg
+disabled = boolAttribute "aria-disabled"
 
 label : String -> Attribute msg
 label = stringAttribute "aria-label"

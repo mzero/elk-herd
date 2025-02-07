@@ -26,20 +26,20 @@ import Util
 commands : C.Commands Msg
 commands =
   [ C.Group "Selected Item Commands"
-    [ C.Button "cmd-rename-item" "Rename" BeginRename
-    , C.Button "cmd-move-item" "Move" BeginMove
-    , C.Button "cmd-create-dir" "New Directory" CreateDir
-    , C.Button "cmd-delete-item" "Move to Trash" MoveToTrash
-    , C.Button "cmd-empty-trash" "Empty Trash" EmptyTrash
+    [ C.Button "cmd-rename-item" "Rename" True BeginRename
+    , C.Button "cmd-move-item" "Move" True BeginMove
+    , C.Button "cmd-create-dir" "New Directory" True CreateDir
+    , C.Button "cmd-delete-item" "Move to Trash" True MoveToTrash
+    , C.Button "cmd-empty-trash" "Empty Trash" True EmptyTrash
     ]
   , C.Group "Sample Commands"
-    [ C.LoadFile "cmd-send-sample" "Send Sample File"
+    [ C.LoadFile "cmd-send-sample" "Send Sample File" True
         SendSampleFiles "audio/*" True
-    , C.Button "cmd-receive-sample" "Get Sample File" ReceiveSampleFiles
+    , C.Button "cmd-receive-sample" "Get Sample File" True ReceiveSampleFiles
     ]
   , C.Group "+Drive Commands"
-    [ C.Button "cmd-scan-drive" "Scan +Drive" KickOff
-    , C.Button "cmd-find-collisions" "Find Duplicates" FindDuplicates
+    [ C.Button "cmd-scan-drive" "Scan +Drive" True KickOff
+    , C.Button "cmd-find-collisions" "Find Duplicates" True FindDuplicates
     ]
   ]
 

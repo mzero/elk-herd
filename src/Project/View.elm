@@ -27,20 +27,23 @@ import Undo
 
 commands : Model -> C.Commands Msg
 commands model =
+  let
+    enabled = not <| Maybe.isJust model.importing
+  in
   [ C.Group "Device Commands"
-    [ C.Button "cmd-proj-dev-fetch"  "Fetch Project"  (RequestProject LoadProject)
-    , C.Button "cmd-proj-dev-send"   "Send Project"    SendProject
-    , C.Button "cmd-proj-dev-import" "Import Project" (RequestProject StartImport)
+    [ C.Button "cmd-proj-dev-fetch"  "Fetch Project"  enabled (RequestProject LoadProject)
+    , C.Button "cmd-proj-dev-send"   "Send Project"   enabled SendProject
+    , C.Button "cmd-proj-dev-import" "Import Project" enabled (RequestProject StartImport)
     ]
   , C.Group "Project Files"
-    [ C.LoadFile "cmd-proj-file-open"   "Open File"   (SelectProjectFile LoadProject)
+    [ C.LoadFile "cmd-proj-file-open"   "Open File"   enabled (SelectProjectFile LoadProject)
       ".syx" False
-    , C.Button   "cmd-proj-file-save"   "Save File"    StartWriteProjectFile
-    , C.LoadFile "cmd-proj-file-import" "Import File" (SelectProjectFile StartImport)
+    , C.Button   "cmd-proj-file-save"   "Save File"   enabled StartWriteProjectFile
+    , C.LoadFile "cmd-proj-file-import" "Import File" enabled (SelectProjectFile StartImport)
       ".syx" False
     ]
   , C.Group "Project Commands"
-    [ C.Button "cmd-proj-clear" "Clear Project" ClearProject
+    [ C.Button "cmd-proj-clear" "Clear Project" enabled ClearProject
     ]
   , C.Group "Undo"
     [ C.Subpanel <| Html.map UndoMsg <| Undo.view model.undoStack ]
