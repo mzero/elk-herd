@@ -471,10 +471,13 @@ h4.dt-name,
     padding-left: .5rem;
     padding-right: .5rem;
     flex: 1;
+    width: 0;
+    overflow: hidden;
     font-family: 'Source Code Pro', monospace;
     font-weight: 600;
     color: #442;
-    white-space: pre;
+    white-space: nowrap;
+    text-overflow: ellipsis;
 }
 .drive-list .locked {
     font-size: 0.5rem;

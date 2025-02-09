@@ -402,6 +402,20 @@ view model =
           ]
         ]
 
+    columns =
+      case model.viewMode of
+        ViewAll -> driveView
+        _ ->
+          Html.div [ Attr.class "row" ]
+            [ Html.div [ Attr.class "col-6" ]
+              [ driveView
+              ]
+            , Html.div [ Attr.class "col-6" ]
+              ( progressSmall
+              :: filesView
+              )
+            ]
+
   in
     Html.div
       [ Attr.id "drive"
@@ -423,15 +437,7 @@ view model =
         [ Html.h3 [ ] [ Html.text "+Drive" ]
         , viewToolBar
         ]
-      , Html.div [ Attr.class "row" ]
-        [ Html.div [ Attr.class "col" ]
-          [ driveView
-          ]
-        , Html.div [ Attr.class "col" ]
-          ( progressSmall
-          :: filesView
-          )
-        ]
+      , columns
       , draggableView model.selection
       ]
 
