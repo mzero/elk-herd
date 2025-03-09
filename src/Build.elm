@@ -10,22 +10,22 @@ module Build exposing
 {-| Stored in localStorage as the last run version.
 -}
 appVersion : Int
-appVersion = 33001
+appVersion = 33002
 
 {-| On startup, if the version in localStorage, is less than this, then
 the app starts with the Settings page. Otherwise, it goes right to the
 Midi Setup page.
 -}
 lastMajorVersion : Int
-lastMajorVersion = 33001
+lastMajorVersion = 33002
 
 {-| Human readable version string.
 -}
 appVersionDisplay : String
-appVersionDisplay = "3.3b2"
+appVersionDisplay = "3.3"
 
 beta : Bool
-beta = True
+beta = False
 
 statsReporting : Bool
 statsReporting = False

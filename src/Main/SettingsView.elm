@@ -74,7 +74,13 @@ versionInfo i s = (i, fromMarkdown s)
 
 changeLog : List (Int, Html.Html msg)
 changeLog =
-  [ versionInfo 33001 """
+  [ versionInfo 33002 """
+## Version 3.3 - Mar 9, 2025
+
+* Improved layout for narrower windows
+"""
+
+  , versionInfo 33001 """
 ## Version 3.3beta2 - Jan 29, 2025
 
 ### Support for Digitakt II
