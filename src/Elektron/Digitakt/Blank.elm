@@ -71,6 +71,7 @@ blankPatternKitData v =
       (Digitakt, 9) -> BlankD1.blankPatternKit_v9_compressed
 
       (Digitakt2, 0) -> BlankD2.blankPatternKit_v0_compressed
+      (Digitakt2, 3) -> BlankD2.blankPatternKit_v3_compressed
       _ -> Nothing
 
 blankPatternKit : Version -> Maybe Dump.PatternKit
@@ -92,6 +93,7 @@ blankProjectSettingsData v =
       (Digitakt, 7) -> BlankD1.blankProjectSettings_v7_compressed
 
       (Digitakt2, 0) -> BlankD2.blankProjectSettings_v0_compressed
+      (Digitakt2, 1) -> BlankD2.blankProjectSettings_v1_compressed
       _ -> Nothing
 
 blankProjectSettings : Version -> Maybe Dump.ProjectSettings

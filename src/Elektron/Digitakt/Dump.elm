@@ -229,11 +229,12 @@ sampleTrack patternKit =
 type alias Pattern =
   { version:      Version
   , tracks:       Array Track         -- 16 x
+  ,   skip1:        ByteArray
   , pLocks:       Array PLock         -- 80 x
   , name:         String              -- 1st part of patternSettingsStorage
-  ,   skip1:        ByteArray
-  , kitIndex:     Int
   ,   skip2:        ByteArray
+  , kitIndex:     Int
+  ,   skip3:        ByteArray
   }
 
 structPattern : StorageStruct Pattern
@@ -241,15 +242,16 @@ structPattern =
   ST.struct Pattern
     |> ST.version .version      "version"     Version.uint32be
     |> ST.fieldV  .tracks       "tracks"      (subStructArray mapPatternVersionToTracks structTrack)
+    |> ST.skipTo  .skip1                      CppStructs.patternStorage_pLocksIndex
     |> ST.fieldV  .pLocks       "pLocks"      (\v ->
                                                 Part.array 80
                                                 <| ST.forVersionSpec structPLock
                                                 <| patternToPlockVersion v
                                               )
     |> ST.field   .name         "name"        (Part.chars 16)
-    |> ST.skipTo  .skip1                      CppStructs.patternStorage_kitIndex
+    |> ST.skipTo  .skip2                      CppStructs.patternStorage_kitIndex
     |> ST.field   .kitIndex     "kitIndex"    Part.uint8
-    |> ST.skipTo  .skip2                      CppStructs.patternStorage_sizeof
+    |> ST.skipTo  .skip3                      CppStructs.patternStorage_sizeof
     |> ST.build "Pattern"
 
 patternToPlockVersion : Version -> VersionSpec
@@ -270,6 +272,10 @@ mapPatternVersionToTracks =
   , { device = Digitakt, parent = 9, child = 5, n = 16 }
 
   , { device = Digitakt2, parent = 0, child = 0, n = 16 }
+  -- v1 & v2 were never released in DT2 firmware
+  -- , { device = Digitakt2, parent = 1, child = 1, n = 16 }
+  -- , { device = Digitakt2, parent = 2, child = 1, n = 16 }
+  , { device = Digitakt2, parent = 3, child = 2, n = 16 }
   ]
 
 patternName : Pattern -> String
@@ -476,6 +482,10 @@ kitVersionToSounds =
   , { device = Digitakt, parent = 9, child = 2, n = 8 }
 
   , { device = Digitakt2, parent = 0, child = 0, n = 16 }
+  -- v1 & v2 were never released in DT2 firmware
+  -- , { device = Digitakt2, parent = 1, child = 1, n = 16 }
+  -- , { device = Digitakt2, parent = 2, child = 1, n = 16 }
+  , { device = Digitakt2, parent = 3, child = 2, n = 16 }
   ]
 
 kitVersionToMidiSetups : List SubStructArrayMap
@@ -492,6 +502,10 @@ kitVersionToMidiSetups =
   , { device = Digitakt, parent = 9, child = 1, n = 8 }
 
   , { device = Digitakt2, parent = 0, child = 0, n = 16 }
+  -- v1 & v2 were never released in DT2 firmware
+  -- , { device = Digitakt2, parent = 1, child = 1, n = 16 }
+  -- , { device = Digitakt2, parent = 2, child = 1, n = 16 }
+  , { device = Digitakt2, parent = 3, child = 2, n = 16 }
   ]
 
 midiMaskPart : Version -> Part (Maybe Int)
@@ -721,4 +735,3 @@ isEmptySample sample = sample.inode == inodeInvalid
 
 sampleLength : Sample -> Int
 sampleLength sample = if isEmptySample sample then 0 else sample.filesize - 16
-

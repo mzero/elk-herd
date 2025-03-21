@@ -14,6 +14,24 @@ Mark for it, and he can generate it for you.
 
 import Elektron.Instrument exposing (Device(..), Version)
 
+patternStorage_pLocksIndex : Version -> Maybe Int
+patternStorage_pLocksIndex v =
+  case (v.device, v.int) of
+    (Digitakt, 0) -> Just 12468
+    (Digitakt, 1) -> Just 14516
+    (Digitakt, 2) -> Just 14516
+    (Digitakt, 3) -> Just 14548
+    (Digitakt, 4) -> Just 14548
+    (Digitakt, 5) -> Just 14548
+    (Digitakt, 6) -> Just 14548
+    (Digitakt, 7) -> Just 14564
+    (Digitakt, 8) -> Just 14564
+    (Digitakt, 9) -> Just 14580
+    (Digitakt2, 0) -> Just 35316
+    (Digitakt2, 3) -> Just 68100
+    _ -> Nothing
+
+
 patternStorage_kitIndex : Version -> Maybe Int
 patternStorage_kitIndex v =
   case (v.device, v.int) of
@@ -28,6 +46,7 @@ patternStorage_kitIndex v =
     (Digitakt, 8) -> Just 24992
     (Digitakt, 9) -> Just 25008
     (Digitakt2, 0) -> Just 55984
+    (Digitakt2, 3) -> Just 88768
     _ -> Nothing
 
 
@@ -45,6 +64,7 @@ patternStorage_sizeof v =
     (Digitakt, 8) -> Just 25088
     (Digitakt, 9) -> Just 25088
     (Digitakt2, 0) -> Just 56320
+    (Digitakt2, 3) -> Just 89088
     _ -> Nothing
 
 
@@ -57,6 +77,7 @@ trackStorage_soundSlotLocks v =
     (Digitakt, 4) -> Just 832
     (Digitakt, 5) -> Just 832
     (Digitakt2, 0) -> Just 1920
+    (Digitakt2, 2) -> Just 1024
     _ -> Nothing
 
 
@@ -70,6 +91,7 @@ trackStorage_sizeof v =
     (Digitakt, 4) -> Just 910
     (Digitakt, 5) -> Just 911
     (Digitakt2, 0) -> Just 2207
+    (Digitakt2, 2) -> Just 1184
     _ -> Nothing
 
 
@@ -87,6 +109,7 @@ kitStorage_trackSounds v =
     (Digitakt, 8) -> Just 36
     (Digitakt, 9) -> Just 36
     (Digitakt2, 0) -> Just 60
+    (Digitakt2, 3) -> Just 60
     _ -> Nothing
 
 
@@ -104,6 +127,7 @@ kitStorage_midiParams v =
     (Digitakt, 8) -> Just 1424
     (Digitakt, 9) -> Just 1424
     (Digitakt2, 0) -> Just 5004
+    (Digitakt2, 3) -> Just 5676
     _ -> Nothing
 
 
@@ -111,6 +135,7 @@ kitStorage_midiMask : Version -> Maybe Int
 kitStorage_midiMask v =
   case (v.device, v.int) of
     (Digitakt2, 0) -> Just 9296
+    (Digitakt2, 3) -> Just 9972
     _ -> Nothing
 
 
@@ -128,6 +153,7 @@ kitStorage_sizeof v =
     (Digitakt, 8) -> Just 2560
     (Digitakt, 9) -> Just 2560
     (Digitakt2, 0) -> Just 9728
+    (Digitakt2, 3) -> Just 10240
     _ -> Nothing
 
 
@@ -137,6 +163,7 @@ midiSetupStorage_enableMask v =
     (Digitakt, 0) -> Just 100
     (Digitakt, 1) -> Just 100
     (Digitakt2, 0) -> Just 256
+    (Digitakt2, 2) -> Just 256
     _ -> Nothing
 
 
@@ -146,6 +173,7 @@ midiSetupStorage_sizeof v =
     (Digitakt, 0) -> Just 108
     (Digitakt, 1) -> Just 108
     (Digitakt2, 0) -> Just 268
+    (Digitakt2, 2) -> Just 268
     _ -> Nothing
 
 
@@ -156,6 +184,7 @@ soundStorage_sampleSlot v =
     (Digitakt, 1) -> Just 68
     (Digitakt, 2) -> Just 68
     (Digitakt2, 0) -> Just 100
+    (Digitakt2, 2) -> Just 100
     _ -> Nothing
 
 
@@ -166,6 +195,7 @@ soundStorage_sampleFile v =
     (Digitakt, 1) -> Just 132
     (Digitakt, 2) -> Just 132
     (Digitakt2, 0) -> Just 279
+    (Digitakt2, 2) -> Just 297
     _ -> Nothing
 
 
@@ -176,6 +206,7 @@ soundStorage_sizeof v =
     (Digitakt, 1) -> Just 160
     (Digitakt, 2) -> Just 160
     (Digitakt2, 0) -> Just 299
+    (Digitakt2, 2) -> Just 341
     _ -> Nothing
 
 
@@ -186,6 +217,7 @@ soundParameters_sampleParamId v =
     (Digitakt, 1) -> Just 20
     (Digitakt, 2) -> Just 20
     (Digitakt2, 0) -> Just 36
+    (Digitakt2, 2) -> Just 36
     _ -> Nothing
 
 
@@ -201,6 +233,7 @@ projectSettingsStorage_sampleList v =
     (Digitakt, 6) -> Just 70
     (Digitakt, 7) -> Just 70
     (Digitakt2, 0) -> Just 251
+    (Digitakt2, 1) -> Just 251
     _ -> Nothing
 
 
@@ -216,6 +249,5 @@ projectSettingsStorage_sizeof v =
     (Digitakt, 6) -> Just 2560
     (Digitakt, 7) -> Just 2560
     (Digitakt2, 0) -> Just 16896
+    (Digitakt2, 1) -> Just 16896
     _ -> Nothing
-
-

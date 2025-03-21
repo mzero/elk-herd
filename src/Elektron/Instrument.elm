@@ -186,6 +186,7 @@ digitakt2Versions : VersionList
 digitakt2Versions =
   [ ({- 1.02   -} "0035", { projectSettings = 0, patternAndKit = 0 })
   , ({- 1.03A  -} "0041", { projectSettings = 0, patternAndKit = 0 })
+  , ({- 1.10   -} "0048", { projectSettings = 1, patternAndKit = 3 })
   ]
 
 {-| Returns the versions for a given instrument by returning the last entry in
@@ -218,4 +219,3 @@ findStorageVersions vlist inst =
             else go rest (Just v)
   in
     go vlist Nothing
-
