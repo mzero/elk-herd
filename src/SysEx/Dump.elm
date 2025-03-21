@@ -118,7 +118,13 @@ parsePayload payload =
 parseStruct : Device -> Int -> Int -> ByteArray -> Parser.Parser ElkDump
 parseStruct device type_ index content =
   let
-    parseResponse fn p = Parser.map fn (Parser.map2 always p Parser.atEnd)
+    parseResponse fn p = Parser.map fn p
+      -- This code no longer checks for atEnd because the instrument can send
+      -- more data than the structure. This happens if the size of the structure
+      -- shrank from a previous version, as the SysEx sending code in the
+      -- instrument always sends from a buffer that is the union of all prior
+      -- versions.
+
     parseRequest v = Parser.map (always v) Parser.atEnd
 
     spec = Version.MatchDevice device
@@ -269,4 +275,3 @@ viewDump ed =
 
       DTWholeProjectRequest ->
         buildView 0x6f "Digitakt Whole Project Request" 0 []
-
