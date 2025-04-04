@@ -135,8 +135,8 @@ updateFromVersionResponse : String -> String -> Instrument -> Instrument
 updateFromVersionResponse build version inst =
   let
     storageVersions = case inst.device of
-      Digitakt  -> findStorageVersions digitaktVersions inst
-      Digitakt2 -> findStorageVersions digitakt2Versions inst
+      Digitakt  -> findStorageVersions digitaktVersions build
+      Digitakt2 -> findStorageVersions digitakt2Versions build
       _ -> Nothing
 
     numSampleSlots = case inst.device of
@@ -207,14 +207,14 @@ OS comes out.
 TODO: Get clarification from Elketron on the way version strings work,
 especially vis-a-vis storage structure settings.
 -}
-findStorageVersions : VersionList -> Instrument -> Maybe StorageVersions
-findStorageVersions vlist inst =
+findStorageVersions : VersionList -> String -> Maybe StorageVersions
+findStorageVersions vlist build =
   let
     go dvs vers =
       case dvs of
         [] -> vers
         (b, v) :: rest ->
-          if inst.build < b
+          if build < b
             then vers
             else go rest (Just v)
   in
