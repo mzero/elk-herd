@@ -535,23 +535,29 @@ isDefaultKit : Kit -> Bool
 isDefaultKit kit =
   let
     slots = Array.toIndexedList <| Array.map soundSampleSlot kit.sounds
-    isDigitakt = kit.version.device == Digitakt
+    allDefault = List.all (\(i, s) -> s == (i + 1))
+      -- clearing the kit sets the tracks to slots 1 ~ n
     allZero = List.all (\(i, s) -> s == 0)
       -- older cleared kits had the slots all set to 0
-    allDefault = List.all (\(i, s) -> s == (i + 1))
-      -- clearing the kit sets the tracks to slots 1 ~ 8
     allSmall = List.all (\(i, s) -> 0 <= s && s <= 8)
-      -- default kits prior to 3.0beta3 were sample shuffled, and so could end
-      -- up with a permutation of 1..8 and zeros for deleted samples
-    allDisabled =
+      -- default kits prior to 3.0beta3 were sample shuffled by elk-herd, and so
+      -- could end up with a permutation of 1..8 and zeros for deleted samples
+    defaultDigitaktSlots s = allDefault s || allZero s || allSmall s
+    allMidiDisabled =
       List.all (not << midiTrackEnabled) <| Array.toList kit.midiSetup
-    noMidiMachines = Maybe.map ((==) 0) kit.midiMask |> Maybe.withDefault True
+    noMidiMachines = kit.midiMask == Just 0
+    halfMidiMachines = kit.midiMask == Just 0xff00
+
   in
-    (allDefault slots
-    || (isDigitakt && (allSmall slots || allZero slots))
-    )
-    && allDisabled
-    && noMidiMachines
+    allMidiDisabled &&
+    case kit.version.device of
+      Digitakt -> defaultDigitaktSlots slots
+      Digitakt2 ->
+        (noMidiMachines && allDefault slots)
+        || (halfMidiMachines -- could this be a DT1 imported default kit?
+            && defaultDigitaktSlots (List.take 8 slots)
+            && allZero (List.drop 8 slots))
+      Unknown -> False
 
 
 -- currently we consider just the sample slot settings of the eight tracks
