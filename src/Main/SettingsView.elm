@@ -74,7 +74,14 @@ versionInfo i s = (i, fromMarkdown s)
 
 changeLog : List (Int, Html.Html msg)
 changeLog =
-  [ versionInfo 33003 """
+  [ versionInfo 33004 """
+## Version 3.3.2 - Mar 21, 2025
+
+* Fixed bug handling instruments with older OSes
+* Properly detect empty patterns in projects imported from DT to DT II
+"""
+
+  , versionInfo 33003 """
 ## Version 3.3.1 - Mar 21, 2025
 
 * Support for Digitakt II OS 1.10
