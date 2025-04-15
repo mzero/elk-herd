@@ -10,7 +10,7 @@ module Build exposing
 {-| Stored in localStorage as the last run version.
 -}
 appVersion : Int
-appVersion = 33004
+appVersion = 33005
 
 {-| On startup, if the version in localStorage, is less than this, then
 the app starts with the Settings page. Otherwise, it goes right to the
@@ -22,7 +22,7 @@ lastMajorVersion = 33002
 {-| Human readable version string.
 -}
 appVersionDisplay : String
-appVersionDisplay = "3.3.2"
+appVersionDisplay = "3.3.3"
 
 beta : Bool
 beta = False
