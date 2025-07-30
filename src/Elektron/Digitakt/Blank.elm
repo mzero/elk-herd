@@ -72,6 +72,7 @@ blankPatternKitData v =
 
       (Digitakt2, 0) -> BlankD2.blankPatternKit_v0_compressed
       (Digitakt2, 3) -> BlankD2.blankPatternKit_v3_compressed
+      (Digitakt2, 4) -> BlankD2.blankPatternKit_v4_compressed
       _ -> Nothing
 
 blankPatternKit : Version -> Maybe Dump.PatternKit

@@ -29,6 +29,7 @@ patternStorage_pLocksIndex v =
     (Digitakt, 9) -> Just 14580
     (Digitakt2, 0) -> Just 35316
     (Digitakt2, 3) -> Just 68100
+    (Digitakt2, 4) -> Just 68100
     _ -> Nothing
 
 
@@ -47,6 +48,7 @@ patternStorage_kitIndex v =
     (Digitakt, 9) -> Just 25008
     (Digitakt2, 0) -> Just 55984
     (Digitakt2, 3) -> Just 88768
+    (Digitakt2, 4) -> Just 88768
     _ -> Nothing
 
 
@@ -65,6 +67,7 @@ patternStorage_sizeof v =
     (Digitakt, 9) -> Just 25088
     (Digitakt2, 0) -> Just 56320
     (Digitakt2, 3) -> Just 89088
+    (Digitakt2, 4) -> Just 89088
     _ -> Nothing
 
 
@@ -110,6 +113,7 @@ kitStorage_trackSounds v =
     (Digitakt, 9) -> Just 36
     (Digitakt2, 0) -> Just 60
     (Digitakt2, 3) -> Just 60
+    (Digitakt2, 4) -> Just 60
     _ -> Nothing
 
 
@@ -128,6 +132,7 @@ kitStorage_midiParams v =
     (Digitakt, 9) -> Just 1424
     (Digitakt2, 0) -> Just 5004
     (Digitakt2, 3) -> Just 5676
+    (Digitakt2, 4) -> Just 17964
     _ -> Nothing
 
 
@@ -136,6 +141,7 @@ kitStorage_midiMask v =
   case (v.device, v.int) of
     (Digitakt2, 0) -> Just 9296
     (Digitakt2, 3) -> Just 9972
+    (Digitakt2, 4) -> Just 22260
     _ -> Nothing
 
 
@@ -154,6 +160,7 @@ kitStorage_sizeof v =
     (Digitakt, 9) -> Just 2560
     (Digitakt2, 0) -> Just 9728
     (Digitakt2, 3) -> Just 10240
+    (Digitakt2, 4) -> Just 22528
     _ -> Nothing
 
 
@@ -164,6 +171,7 @@ midiSetupStorage_enableMask v =
     (Digitakt, 1) -> Just 100
     (Digitakt2, 0) -> Just 256
     (Digitakt2, 2) -> Just 256
+    (Digitakt2, 3) -> Just 256
     _ -> Nothing
 
 
@@ -174,6 +182,7 @@ midiSetupStorage_sizeof v =
     (Digitakt, 1) -> Just 108
     (Digitakt2, 0) -> Just 268
     (Digitakt2, 2) -> Just 268
+    (Digitakt2, 3) -> Just 268
     _ -> Nothing
 
 
@@ -185,6 +194,7 @@ soundStorage_sampleSlot v =
     (Digitakt, 2) -> Just 68
     (Digitakt2, 0) -> Just 100
     (Digitakt2, 2) -> Just 100
+    (Digitakt2, 3) -> Just 100
     _ -> Nothing
 
 
@@ -196,6 +206,7 @@ soundStorage_sampleFile v =
     (Digitakt, 2) -> Just 132
     (Digitakt2, 0) -> Just 279
     (Digitakt2, 2) -> Just 297
+    (Digitakt2, 3) -> Just 297
     _ -> Nothing
 
 
@@ -207,6 +218,7 @@ soundStorage_sizeof v =
     (Digitakt, 2) -> Just 160
     (Digitakt2, 0) -> Just 299
     (Digitakt2, 2) -> Just 341
+    (Digitakt2, 3) -> Just 1109
     _ -> Nothing
 
 
@@ -218,6 +230,7 @@ soundParameters_sampleParamId v =
     (Digitakt, 2) -> Just 20
     (Digitakt2, 0) -> Just 36
     (Digitakt2, 2) -> Just 36
+    (Digitakt2, 3) -> Just 36
     _ -> Nothing
 
 

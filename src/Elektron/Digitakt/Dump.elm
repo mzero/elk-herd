@@ -276,6 +276,7 @@ mapPatternVersionToTracks =
   -- , { device = Digitakt2, parent = 1, child = 1, n = 16 }
   -- , { device = Digitakt2, parent = 2, child = 1, n = 16 }
   , { device = Digitakt2, parent = 3, child = 2, n = 16 }
+  , { device = Digitakt2, parent = 4, child = 2, n = 16 }
   ]
 
 patternName : Pattern -> String
@@ -486,6 +487,7 @@ kitVersionToSounds =
   -- , { device = Digitakt2, parent = 1, child = 1, n = 16 }
   -- , { device = Digitakt2, parent = 2, child = 1, n = 16 }
   , { device = Digitakt2, parent = 3, child = 2, n = 16 }
+  , { device = Digitakt2, parent = 4, child = 3, n = 16 }
   ]
 
 kitVersionToMidiSetups : List SubStructArrayMap
@@ -506,6 +508,7 @@ kitVersionToMidiSetups =
   -- , { device = Digitakt2, parent = 1, child = 1, n = 16 }
   -- , { device = Digitakt2, parent = 2, child = 1, n = 16 }
   , { device = Digitakt2, parent = 3, child = 2, n = 16 }
+  , { device = Digitakt2, parent = 4, child = 3, n = 16 }
   ]
 
 midiMaskPart : Version -> Part (Maybe Int)

@@ -17,7 +17,7 @@ tests = T.describe "Elektron.Digitakt.Blank"
   [ testPatternKit Digitakt 9
   , testProjectSettings Digitakt 7
 
-  , testPatternKit Digitakt2 3
+  , testPatternKit Digitakt2 4
   , testProjectSettings Digitakt2 1
   ]
 

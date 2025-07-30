@@ -157,7 +157,7 @@ type alias VersionList = List (String, StorageVersions)
 it uses. It can load older versions, but will always produce these versions.
 
 The application sometimes needs "blank" versions of a project or a pattern.
-This table determines which versino of those structures are needed. See
+This table determines which version of those structures are needed. See
 `Elektron.Digitakt.Blank` for the actual blank versions.
 -}
 digitaktVersions : VersionList
@@ -188,6 +188,8 @@ digitakt2Versions =
   , ({- 1.03A  -} "0041", { projectSettings = 0, patternAndKit = 0 })
   , ({- 1.10   -} "0048", { projectSettings = 1, patternAndKit = 3 })
   , ({- 1.10A  -} "0053", { projectSettings = 1, patternAndKit = 3 })
+  , ({- 1.15   -} "0054", { projectSettings = 1, patternAndKit = 4 }) {- fix me -}
+  , ({- 1.15A  -} "0069", { projectSettings = 1, patternAndKit = 4 })
   ]
 
 {-| Returns the versions for a given instrument by returning the last entry in
