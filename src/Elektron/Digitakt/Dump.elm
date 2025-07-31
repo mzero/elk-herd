@@ -118,6 +118,23 @@ structure determines the version of the child structure.
 
 type alias SubStructMap a = { a | device : Device, parent : Int, child : Int }
 
+lookupSubStructEntry :
+  List (SubStructMap a)
+  -> Version
+  -> Maybe (SubStructMap a)
+lookupSubStructEntry mapping v =
+  let
+    go items =
+      case items of
+        [] -> Nothing
+        m :: rest ->
+          if m.device == v.device && m.parent == v.int
+            then Just m
+            else go rest
+  in
+    go mapping
+
+
 {-| Lookup the version for a child structure from the version of the parent
 -}
 subStructVersion :
@@ -125,16 +142,8 @@ subStructVersion :
   -> Version
   -> Maybe Version
 subStructVersion mapping v =
-  let
-    go items =
-      case items of
-        [] -> Nothing
-        m :: rest ->
-          if m.device == v.device && m.parent == v.int
-            then Just <| Version m.device m.child
-            else go rest
-  in
-    go mapping
+  lookupSubStructEntry mapping v
+  |> Maybe.map (\m -> Version m.device m.child)
 
 
 {-| Lookup an entry for a version, then pass that entry plus a VersionSpec
@@ -147,17 +156,9 @@ subStruct :
   -> Version
   -> Part c
 subStruct mapping fPart v =
-  let
-    go items =
-      case items of
-        [] ->
-          Part.fail ("No mapping from v" ++ String.fromInt v.int)
-        m :: rest ->
-          if m.device == v.device && m.parent == v.int
-            then fPart m <| MatchVersion <| Version m.device m.child
-            else go rest
-  in
-    go mapping
+  case lookupSubStructEntry mapping v of
+    Just m -> fPart m <| MatchVersion <| Version m.device m.child
+    Nothing -> Part.fail ("No mapping from v" ++ String.fromInt v.int)
 
 
 type alias SubStructArrayMap = SubStructMap { n : Int }
