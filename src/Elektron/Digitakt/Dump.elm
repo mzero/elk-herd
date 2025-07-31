@@ -118,6 +118,25 @@ structure determines the version of the child structure.
 
 type alias SubStructMap a = { a | device : Device, parent : Int, child : Int }
 
+{-| Lookup the version for a child structure from the version of the parent
+-}
+subStructVersion :
+  List (SubStructMap a)
+  -> Version
+  -> Maybe Version
+subStructVersion mapping v =
+  let
+    go items =
+      case items of
+        [] -> Nothing
+        m :: rest ->
+          if m.device == v.device && m.parent == v.int
+            then Just <| Version m.device m.child
+            else go rest
+  in
+    go mapping
+
+
 {-| Lookup an entry for a version, then pass that entry plus a VersionSpec
 for the child to a function for creating the Part. If none found, return
 Part.fail
@@ -384,6 +403,7 @@ structPLock =
 plockSamplePLocks : PatternKit -> PLock -> Maybe (Array (Maybe Int))
 plockSamplePLocks patternKit plock =
   let
+    soundVersion = subStructVersion kitVersionToSounds patternKit.kit.version
     decodeStep =
       case plock.version.device of
         Digitakt ->
@@ -395,7 +415,8 @@ plockSamplePLocks patternKit plock =
         _ -> always Nothing
     isSampleTrack = sampleTrack patternKit
     isSamplePlock =
-      CppStructs.soundParameters_sampleParamId plock.version
+      soundVersion
+      |> Maybe.andThen CppStructs.soundParameters_sampleParamId
       |> Maybe.map (\n -> n == plock.paramId && isSampleTrack plock.track)
       |> Maybe.withDefault False
   in
