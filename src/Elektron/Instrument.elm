@@ -179,16 +179,18 @@ digitaktVersions =
   , ({- 1.51   -} "0088", { projectSettings = 7, patternAndKit = 9 })
   , ({- 1.51A  -} "0089", { projectSettings = 7, patternAndKit = 9 })
   , ({- 1.52   -} "0095", { projectSettings = 7, patternAndKit = 9 })
+  , ({- 1.52A  -} "0097", { projectSettings = 7, patternAndKit = 9 })
   ]
 
 digitakt2Versions : VersionList
   -- assoc list of build to versions
 digitakt2Versions =
   [ ({- 1.02   -} "0035", { projectSettings = 0, patternAndKit = 0 })
+  , ({- 1.03   -} "0039", { projectSettings = 0, patternAndKit = 0 })
   , ({- 1.03A  -} "0041", { projectSettings = 0, patternAndKit = 0 })
   , ({- 1.10   -} "0048", { projectSettings = 1, patternAndKit = 3 })
   , ({- 1.10A  -} "0053", { projectSettings = 1, patternAndKit = 3 })
-  , ({- 1.15   -} "0054", { projectSettings = 1, patternAndKit = 4 }) {- fix me -}
+  , ({- 1.15   -} "0065", { projectSettings = 1, patternAndKit = 4 })
   , ({- 1.15A  -} "0069", { projectSettings = 1, patternAndKit = 4 })
   ]
 
