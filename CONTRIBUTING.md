@@ -192,9 +192,32 @@ by Bootstrap. See, for example, `Alert` or `Progress`.
 ## Other files
 
   * `assets/` - images, css, a font, bootstrap, jquery
-  * `tests/` - a paltry set of unit tests
+  * `tests/` - a paltry set of unit tests, run with `elm-test` - see the
+    Building section of README.md for the invocation
   * `*.html` - the top level pages
   * `*.sh` - shell scripts for building, see the Building section of README.md
+
+
+# Build system notes
+
+A few things about the build scripts that will otherwise surprise you:
+
+**`src/SysEx/Debug.elm` is a symlink, and the build rewrites it.** `make-dev.sh`
+points it at `Debug.elm.dev`, `make-prod.sh` at `Debug.elm.prod`. The link
+itself is checked in, so going back and forth between a dev and a prod build
+always leaves it dirty in `git status`. That's expected - don't commit the flip
+unless you mean to.
+
+**`make-dev.sh` compiles with `--optimize` first.** elm refuses to optimize code
+that can still reach `Debug.log` and friends, so when the compiler comes back
+with DEBUG REMNANTS the script prints just that part of the error and rebuilds
+without `--optimize`. If you get a clean optimized build, nothing in the dev
+`Debug.elm` was live.
+
+**The scripts are bash, not POSIX sh.** They use `function name { }` and
+`local`, so the shebang has to be `#!/bin/bash`. With `#!/bin/sh` they work on a
+Mac (where `/bin/sh` is bash) and break on Debian and Ubuntu (where it's dash)
+with `Syntax error: "}" unexpected`.
 
 # Coding Style
 

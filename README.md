@@ -69,6 +69,11 @@ language for the web.
 
 > https://guide.elm-lang.org/install/elm.html
 
+The 0.19.1 binaries are x86_64 only. On an Apple Silicon Mac they run fine under
+Rosetta 2 (`softwareupdate --install-rosetta`, if you've never installed it).
+If you'd rather not go hunting for a binary, `npm install -g elm@latest-0.19.1`
+puts the same compiler on your path.
+
 ## 2. Dependencies
 There are a few external elm packages which will be downloaded the
 first time you build. **elk-herd** also makes use of
@@ -84,9 +89,23 @@ this script:
 
 > `./make-dev.sh`
 
-Then open `./index.html` in your browser.
+Then open `./index.html` in your browser. Opening it straight off disk works:
+Chrome counts `file://` as a secure context, so WebMIDI is available. If you'd
+rather serve it, `python3 -m http.server` in this directory and open
+`http://localhost:8000/index.html`. Either way it runs entirely on your machine.
 
-## 4. Build the production build
+## 4. Run the tests
+
+The unit tests are in `tests/`, and run with **elm-test**. Pin the version:
+
+> `npx elm-test@0.19.1-revision17`
+
+That's 125 tests in about a second and a half. The version pin matters: plain
+`elm-test` / `elm-test@latest` on npm now expects elm 0.19.2 and stops with a
+confusing `ELM VERSION MISMATCH`, and the `elm-test@0.19.1` tag is a deprecated
+stub that exits without running anything.
+
+## 5. Build the production build
 If you want to build the production build, you need a javascript
 minimizer like [terser](https://terser.org/). Install **terser**, if needed:
 
@@ -104,7 +123,7 @@ Now you have a tree at `distribution/elk-herd/` that you can serve
 from a web server.  It's also already tar-ball'd up for you:
 `distribution/elk-herd-live.tgz`
 
-## 5. Explore the code
+## 6. Explore the code
 There is a code over view, and other coding notes in the **CONTRIBUTING.md**
 document.
 
