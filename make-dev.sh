@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 
 mkdir build 2>/dev/null || true
 
